@@ -5,8 +5,8 @@ import mmcv
 import numpy as np
 import shutil
 
-logger.add(r"/home/wjx/data/dataset/Heart/cropped_processed/log.log")
-root = r"/home/wjx/data/dataset/Heart/cropped_processed"
+logger.add(r"/home/wjx/data/dataset/Heart/cropped_processed_DrLiu_250416_log.log")
+root = r"/home/wjx/data/dataset/Heart/cropped_processed_DrLiu_250416"
 videos = glob.glob(os.path.join(root, "*.avi"))
 frames = []
 fps = []
@@ -41,7 +41,7 @@ height = np.array(height)
 logger.info('\n'*3)
 logger.info('##################### statistics of dataset #####################')
 logger.info(f"Frames mean {np.mean(frames)} median {np.median(frames)} mode {np.argmax(np.bincount(frames))}")
-logger.info(f"FPS(int) mean {np.mean(fps)} median {np.median(fps)} mode {np.argmax(np.bincount(fps))}")
+logger.info(f"FPS (int) mean {np.mean(fps)} median {np.median(fps)} mode {np.argmax(np.bincount(fps))}")
 logger.info(f"WIDTH mean {np.mean(widht)} median {np.median(widht)} mode {np.argmax(np.bincount(widht))}")
 logger.info(f"HEIGHT mean {np.mean(height)} median {np.median(height)} mode {np.argmax(np.bincount(height))}")
 logger.info(f'{len(A)} A1 - {len(B)} B1 - {len(C)} C1 - {len(D)} D1')

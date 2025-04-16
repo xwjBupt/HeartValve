@@ -67,18 +67,22 @@ def process_video_to_array(input_path, logger, target_frame_count=48, target_res
     return video_array
 
 
-env = lmdb.open('/home/wjx/data/code/HeartValve/Data', map_size=1099511627776)
+target_frame_count = 8
+target_resolution=(240, 320) #width,height
+databasedir = '/home/wjx/data/code/HeartValve/Database/T%02dV%03dx%03d'%(target_frame_count,target_resolution[0],target_resolution[1])
+os.makedirs(databasedir,exist_ok = True)
+env = lmdb.open(databasedir, map_size=1099511627776)
 lib = env.begin(write=True)
 meta_data = {}
-logger.add(r"/home/wjx/data/dataset/Heart/cropped_processed/log.log")
-root = r"/home/wjx/data/dataset/Heart/cropped_processed"
+logger.add(r"/home/wjx/data/dataset/Heart/cropped_processed_DrLiu_250416_log.log")
+root = r"/home/wjx/data/dataset/Heart/cropped_processed_DrLiu_250416"
 videos = glob.glob(os.path.join(root, "*.avi"))
 index = 0
 logger.info('\n'*2)
 for video in tqdm(videos):
     name = video.split('/')[-1]
     logger.info(f'>>> process {name}')
-    new_video = process_video_to_array(video,logger)
+    new_video = process_video_to_array(video,logger,target_frame_count=target_frame_count, target_resolution=target_resolution)
     lib.put(
         key=(name).encode(),
         value=pickle.dumps(new_video),
