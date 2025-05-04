@@ -1,14 +1,11 @@
 import os
 import glob
 from loguru import logger
-import mmcv
 import numpy as np
 import shutil
 import lmdb
 import pickle
 from tqdm import tqdm
-
-
 import cv2
 import numpy as np
 
@@ -68,8 +65,8 @@ def process_video_to_array(input_path, logger, target_frame_count=48, target_res
 
 
 target_frame_count = 8
-target_resolution=(240, 320) #width,height
-databasedir = '/home/wjx/data/code/HeartValve/Database/T%02dV%03dx%03d'%(target_frame_count,target_resolution[0],target_resolution[1])
+target_resolution=(256, 320) #width,height
+databasedir = '/home/wjx/data/code/HeartValve/DatabaseLmdb/T%02dW%03dH%03d'%(target_frame_count,target_resolution[0],target_resolution[1])
 os.makedirs(databasedir,exist_ok = True)
 env = lmdb.open(databasedir, map_size=1099511627776)
 lib = env.begin(write=True)

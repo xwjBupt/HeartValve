@@ -25,7 +25,7 @@ from Lib import read_json
 from functools import partial
 from torchsampler import ImbalancedDatasetSampler
 import copy
-
+from loguru import logger
 
 class HartValve(data.Dataset):
     def __init__(
@@ -34,7 +34,7 @@ class HartValve(data.Dataset):
         time_size=8,
         state="train",
         json_file_dir='/home/wjx/data/dataset/Heart/cropped_processed_DrLiu_250416_fold3.json',
-        databasedir = '/home/wjx/data/code/HeartValve/Database',
+        databasedir = '/home/wjx/data/code/HeartValve/DatabaseLmdb',
         fold = '0',
         phase='all',
         **kwargs
@@ -45,20 +45,21 @@ class HartValve(data.Dataset):
         self.time_size = time_size
         self.fold = fold
         self.phase = phase
+        self.num_classes = 2
         all_samples = read_json(json_file_dir)
         self.patientid = all_samples["split_"+self.fold]["%s" % self.state]
         self.patientid_videos = all_samples['patientid_videos']
         self.env = lmdb.open(
             os.path.join(
-                databasedir,'T%02dV%03dx%03d'%(time_size,visual_size[0],visual_size[1]) # W,H
+                databasedir,'T%02dW%03dH%03d'%(time_size,visual_size[0],visual_size[1]) # W,H
             ),
             readonly=True,
             lock=False,
             readahead=False,
             meminit=False,
         )
-        if self.state=='train':
-            self.trans = TRANS.Compose(
+        
+        self.train_trans = TRANS.Compose(
                 [
                     TRANS.RandomErode(k=3, high=192, low=16, p=0.15),
                     TRANS.RandomDilate(k=3, high=192, low=16, p=0.15),
@@ -81,38 +82,38 @@ class HartValve(data.Dataset):
                     TRANS.TioZNormalization(p=1, div255=True),
                 ]
             )
-        else:
-            self.trans = TRANS.TioZNormalization(p=1, div255=True)
+        self.val_trans = TRANS.TioZNormalization(p=1, div255=True)
 
     def __len__(self):
         return len(self.patientid)
 
     def __getitem__(self, index):
-        self.name = self.patientid[index]
-        self.label = self.__map_label(self.name)
-        self.video_names = self.patientid_videos[self.name]
-        gray_long_view, gray_short_view, color_long_view, color_short_view= self.__load_arrays(
+        self.patient_name = self.patientid[index]
+        self.label = self.__map_label(self.patient_name)
+        self.video_names = self.patientid_videos[self.patient_name]
+        gray_long_view, gray_short_view, color_long_view, color_short_view, effective_views= self.__load_arrays(
             self.video_names, time_size=self.time_size, visual_size=self.visual_size
         )
         raw_views = dict(gray_long_view = gray_long_view, gray_short_view = gray_short_view,color_long_view = color_long_view,color_short_view = color_short_view)
-        gray_long_view = self.trans(gray_long_view).contiguous()
-        gray_short_view = self.trans(gray_short_view).contiguous()
-        color_long_view = self.trans(color_long_view).contiguous()
-        color_short_view = self.trans(color_short_view).contiguous()
+        effective_views_tensors = {}
+        for k,v in effective_views.items():
+            if v ==True and self.state=="train":
+                effective_views_tensors[k] = self.train_trans(raw_views[k]).contiguous()
+            else:
+                effective_views_tensors[k] = self.val_trans(raw_views[k]).contiguous()
+
 
         return dict(
-            gray_long_view=gray_long_view,
-            gray_short_view=gray_short_view,
-            color_long_view=color_long_view,
-            color_short_view=color_short_view,
-            raw_vies = raw_views,
+            raw_views = raw_views,
+            effective_views= effective_views,
+            effective_views_tensors = effective_views_tensors,
             label=self.label,
-            name=self.name,
+            patient_name=self.patient_name,
             video_names = self.video_names
         )
 
     def get_weighted_count(self):
-        labels_list = [0 for i in range(5)]
+        labels_list = [0 for i in range(self.num_classes)]
         for sample in self.patientid:
             labels_list[self.__map_label(sample).item()] += 1
         labels_list = [i for i in labels_list if i]
@@ -124,27 +125,37 @@ class HartValve(data.Dataset):
         return weighted_list
 
     def __load_arrays(self, video_names, time_size, visual_size): # TODO (8, 320, 240, 3)
-        gray_long_view = np.ones((time_size,visual_size[1],visual_size[0],3),dtype = np.uint8)
-        gray_short_view = np.ones((time_size,visual_size[1],visual_size[0],3),dtype = np.uint8)
-        color_long_view = np.ones((time_size,visual_size[1],visual_size[0],3),dtype = np.uint8)
-        color_short_view = np.zeros((time_size,visual_size[1],visual_size[0],3),dtype = np.uint8)
+        gray_long_view = np.ones((3,time_size,visual_size[1],visual_size[0]),dtype = np.uint8)
+        gray_short_view = np.ones((3,time_size,visual_size[1],visual_size[0]),dtype = np.uint8)
+        color_long_view = np.ones((3,time_size,visual_size[1],visual_size[0]),dtype = np.uint8)
+        color_short_view = np.zeros((3,time_size,visual_size[1],visual_size[0]),dtype = np.uint8)
+        effective_views = dict(gray_long_view = False, gray_short_view = False,color_long_view = False,color_short_view = False)
         with self.env.begin(write=False) as txn:
             for video_name in video_names:
-                view = pickle.loads(
-                    txn.get((video_name).encode())
-                )
+                try:
+                    view = pickle.loads(
+                        txn.get((video_name).encode())
+                    )
+                except Exception as e:
+                    logger.error (f'{video_name} is not right in {video_names}')
+                    continue
                 axis = video_name.split('#')[-1]
                 if 'A' == axis[0]:
                     gray_short_view =  view.transpose(3,0,1,2)
+                    effective_views['gray_short_view'] = True
                 elif 'B' == axis[0]:
                     color_short_view = view.transpose(3,0,1,2)
+                    effective_views['color_short_view'] = True
                 elif 'C' == axis[0]:
                     gray_long_view = view.transpose(3,0,1,2)
+                    effective_views['gray_long_view'] = True
                 elif 'D' == axis[0]:
                     color_long_view = view.transpose(3,0,1,2)
+                    effective_views['color_long_view'] = True
                 else:
-                    assert False, "video_name {} not supported".format(video_name)                
-        return torch.tensor(gray_long_view,dtype = torch.float32), torch.tensor(gray_short_view,dtype = torch.float32), torch.tensor(color_long_view,dtype = torch.float32), torch.tensor(color_short_view,dtype = torch.float32) # CDHW
+                    logger.error("video_name {} not supported".format(video_name)) 
+                    continue             
+        return torch.tensor(gray_long_view,dtype = torch.float32), torch.tensor(gray_short_view,dtype = torch.float32), torch.tensor(color_long_view,dtype = torch.float32), torch.tensor(color_short_view,dtype = torch.float32),effective_views # CDHW
 
     def __map_label(self, file_dir):
         label_str = file_dir.split("/")[-1].split("#")[0]
@@ -157,14 +168,14 @@ class HartValve(data.Dataset):
 
 
 if __name__ == "__main__":
-    hv = HartValve() 
-    print(hv.get_weighted_count())
+    hv = HartValve(state="train") 
+    logger.info(hv.get_weighted_count())
     start = time.time()
-    labels_list = [0 for i in range(5)]
+    labels_list = [0 for i in range(2)]
     for index, datas in tqdm.tqdm(enumerate(hv)):
         labels_list[datas["label"].item()] += 1
         if index%10==0:
-            print (datas['name'],datas['video_names'],gray_long_view.shape(),gray_short_view.shape(),color_long_view.shape(),color_short_view.shape())
+            logger.info(f"{datas['patient_name']},{datas['video_names']},{datas['effective_views']},{datas['effective_views_tensors']['gray_long_view'].shape},{datas['effective_views_tensors']['gray_short_view'].shape},{datas['effective_views_tensors']['color_long_view'].shape},{datas['effective_views_tensors']['color_short_view'].shape}")
     fps = len(hv) / (time.time() - start)
-    print(fps)
-    print(labels_list)
+    logger.info (fps)
+    logger.info (labels_list)
