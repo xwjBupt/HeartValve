@@ -184,13 +184,6 @@ def main(cfg):
         best_mean_f1 = -1.0
         best_mean_f1_epoch = -1
         final_stop = cfg.BASIC.Epochs
-    if (
-        cfg.MODEL.Para.cor_pretrained
-        or cfg.MODEL.Para.sag_pretrained
-        or cfg.MODEL.Para.fuse_pretrained
-    ):
-        for k, v in net.loaded_keys.items():
-            logger.debug("{} -- {}\n\n".format(k, v))
     logger.info(loss)
     # experiment setup
     if num_gpus > 1:

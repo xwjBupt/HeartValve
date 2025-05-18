@@ -126,14 +126,8 @@ def auc_and_roc_curve(
 
 def plot_confusion_matrix(cm, savename, title="Confusion Matrix"):
     if len(cm) == 1:
-        if cm.shape[0] == 5:
-            classes = ["T0", "T1", "T2a", "T2b", "T3"]
-        elif cm.shape[0] == 4:
-            classes = ["T0/1", "T2a", "T2b", "T3"]
-        elif cm.shape[0] == 2:
-            classes = ["Tb", "Tg"]
-        else:
-            assert False, "make sure the output class num if 4 or 5 or 2"
+        classes = ["Tb", "Tg"]
+        cm = cm[0]
         cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
         plt.figure(figsize=(12, 8), dpi=600)
         np.set_printoptions(precision=2)

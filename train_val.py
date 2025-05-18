@@ -12,7 +12,6 @@ from Lib import MetricLogger, get_metrics
 
 def train(
     net,
-    view_mode,
     device,
     dataloader,
     optimizer,
@@ -34,9 +33,11 @@ def train(
     for index, data in enumerate(tbar):
         label = data["label"].to(device, non_blocking=True)
         effective_views = data["effective_views"]
-        effective_views_tensors = data["effective_views_tensors"].to(device, non_blocking=True)
+        effective_views_tensors = data["effective_views_tensors"]
         gt_labels.append(data["label"])
-        pred_logits = net(effective_views,effective_views_tensors)
+        video_names = data["video_names"]
+        patient_name = data['patient_name']
+        pred_logits = net(effective_views,effective_views_tensors,device)
         loss, loss_dict = criterion(pred_logits, label)
         loss_logger.update(**loss_dict)
         optimizer.zero_grad()
@@ -47,9 +48,9 @@ def train(
         pred_label_fuse = (
             torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1).detach().cpu()
         )
-        pred_labels_fuse.append(pred_label_fuse)
-        pred_label_fuse = [str(i.item()) for i in list(pred_label_fuse)]
-        for name, pred in zip(data["name"], pred_label_fuse):
+        pred_labels_fuse.append(pred_label_fuse.unsqueeze(0))
+        pred_label_fuse = [str(i.item()) for i in list(pred_labels_fuse)]
+        for name, pred in zip(patient_name, pred_label_fuse):
             name_pred_dict[name] = pred
         if index % iter_dis == 0 and rank == 0:
             tbar.set_description(
@@ -73,7 +74,6 @@ def train(
 @torch.no_grad()
 def val(
     net,
-    view_mode,
     device,
     dataloader,
     epoch,
@@ -96,18 +96,19 @@ def val(
     for index, data in enumerate(tbar):
         label = data["label"].to(device, non_blocking=True)
         effective_views = data["effective_views"]
-        effective_views_tensors = data["effective_views_tensors"].to(device, non_blocking=True)
+        effective_views_tensors = data["effective_views_tensors"]
         gt_labels.append(data["label"])
-        pred_logits = net(effective_views,effective_views_tensors)
+        patient_name = data['patient_name']
+        pred_logits = net(effective_views,effective_views_tensors,device)
         loss, loss_dict = criterion(pred_logits, label)
         loss_logger.update(**loss_dict)
 
         pred_label_fuse = (
             torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1).detach().cpu()
         )
-        pred_labels_fuse.append(pred_label_fuse)
-        pred_label_fuse = [str(i.item()) for i in list(pred_label_fuse)]
-        for name, pred in zip(data["name"], pred_label_fuse):
+        pred_labels_fuse.append(pred_label_fuse.unsqueeze(0))
+        pred_label_fuse = [str(i.item()) for i in list(pred_labels_fuse)]
+        for name, pred in zip(patient_name, pred_label_fuse):
             name_pred_dict[name] = pred
         if index % iter_dis == 0 and rank == 0:
             tbar.set_description(

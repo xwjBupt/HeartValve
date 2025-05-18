@@ -34,25 +34,25 @@ _C.DATA.Train.Class = "HartValve"
 _C.DATA.Train.DataPara = CN()
 _C.DATA.Train.DataPara.name = "HartValve"
 _C.DATA.Train.DataPara.state = "train"
-_C.DATA.Train.DataPara.json_file_dir = None
+_C.DATA.Train.DataPara.json_file_dir = '/home/wjx/data/dataset/Heart/cropped_processed_DrLiu_250416_fold3.json'
 _C.DATA.Train.DataPara.fast_time_size = 8
 _C.DATA.Train.DataPara.crop = (0.1, 0.1, 0.2, 0.1)
 _C.DATA.Train.DataPara.visual_size = (320,256)
 _C.DATA.Train.LoaderPara = CN()
-_C.DATA.Train.LoaderPara.batch_size = 6
-_C.DATA.Train.LoaderPara.num_workers = 8
+_C.DATA.Train.LoaderPara.batch_size = 1
+_C.DATA.Train.LoaderPara.num_workers = 2
 
 _C.DATA.Val = CN()
 _C.DATA.Val.Class = _C.DATA.Train.Class
 _C.DATA.Val.DataPara = CN()
 _C.DATA.Val.DataPara.name = _C.DATA.Train.DataPara.name
-_C.DATA.Val.DataPara.state = "val"
+_C.DATA.Val.DataPara.state = "test"
 _C.DATA.Val.DataPara.fast_time_size = _C.DATA.Train.DataPara.fast_time_size
 _C.DATA.Val.DataPara.crop = -1
 _C.DATA.Val.DataPara.visual_size = _C.DATA.Train.DataPara.visual_size
 _C.DATA.Val.LoaderPara = CN()
-_C.DATA.Val.LoaderPara.batch_size = _C.DATA.Train.LoaderPara.batch_size * 2
-_C.DATA.Val.LoaderPara.num_workers = _C.DATA.Train.LoaderPara.num_workers * 2
+_C.DATA.Val.LoaderPara.batch_size = 1
+_C.DATA.Val.LoaderPara.num_workers = 2
 
 
 
@@ -72,7 +72,7 @@ _C.SCHEDULER.Para.T_mult = 2
 _C.SCHEDULER.Para.eta_min = 1.0e-6
 
 _C.LOSS = CN()
-_C.LOSS.Name = "LabelSmoothSeasaw_MISO"
+_C.LOSS.Name = "LabelSmoothingCrossEntropy"
 _C.LOSS.Para = CN()
 _C.LOSS.Para.balance = [
     [0.8, 1.2],
@@ -105,14 +105,12 @@ _C.MODEL.Para.mlp_dropout_rate = 0
 _C.MODEL.Para.num_heads = 8
 _C.MODEL.Para.expand_dim = 8
 _C.MODEL.Para.deep_super = [False, True, False, True]
-_C.MODEL.Para.OVA = _C.BASIC.OVA
 _C.MODEL.Para.fuse_pretrained = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "Src", "X3D_M-Kinect.pyth"
 )
 
 _C.METHOD = CN()
 _C.METHOD.Desc = "T%02dH%03dW%03d/%s-%s" % (
-    fu,
     _C.DATA.Train.DataPara.fast_time_size,
     _C.DATA.Train.DataPara.visual_size[0],
     _C.DATA.Train.DataPara.visual_size[1],

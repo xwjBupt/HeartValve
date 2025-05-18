@@ -17,7 +17,7 @@ import lmdb
 import time
 import torch.nn.functional as F
 import torchvision.transforms as tvt
-import transforms as TRANS
+import Data.transforms as TRANS
 from multiprocessing import Pool, Manager
 import multiprocessing
 from typing import Callable, List, Optional, Tuple
@@ -30,7 +30,7 @@ from loguru import logger
 class HartValve(data.Dataset):
     def __init__(
         self,
-        visual_size=(240,320),#witdh*height
+        visual_size=(320,256),#witdh*height
         time_size=8,
         state="train",
         json_file_dir='/home/wjx/data/dataset/Heart/cropped_processed_DrLiu_250416_fold3.json',
@@ -51,7 +51,7 @@ class HartValve(data.Dataset):
         self.patientid_videos = all_samples['patientid_videos']
         self.env = lmdb.open(
             os.path.join(
-                databasedir,'T%02dW%03dH%03d'%(time_size,visual_size[0],visual_size[1]) # W,H
+                databasedir,'T%02dH%03dW%03d'%(time_size,visual_size[0],visual_size[1]) # H,W
             ),
             readonly=True,
             lock=False,
@@ -77,7 +77,7 @@ class HartValve(data.Dataset):
                     TRANS.Crop(crop=(0.2, 0.2, 0.2, 0.2)),
                     TRANS.Resize(
                         t=self.time_size,
-                        visual=(self.visual_size[1], self.visual_size[0]),
+                        visual=(self.visual_size[0], self.visual_size[1]),
                     ),
                     TRANS.TioZNormalization(p=1, div255=True),
                 ]
@@ -97,10 +97,12 @@ class HartValve(data.Dataset):
         raw_views = dict(gray_long_view = gray_long_view, gray_short_view = gray_short_view,color_long_view = color_long_view,color_short_view = color_short_view)
         effective_views_tensors = {}
         for k,v in effective_views.items():
-            if v ==True and self.state=="train":
+            if v == True and self.state=="train":
                 effective_views_tensors[k] = self.train_trans(raw_views[k]).contiguous()
-            else:
+            if v == True and self.state=="test":
                 effective_views_tensors[k] = self.val_trans(raw_views[k]).contiguous()
+            else:
+                effective_views_tensors[k] = raw_views[k].contiguous()
 
 
         return dict(
@@ -124,11 +126,11 @@ class HartValve(data.Dataset):
         self.labels_list = labels_list
         return weighted_list
 
-    def __load_arrays(self, video_names, time_size, visual_size): # TODO (8, 320, 240, 3)
-        gray_long_view = np.ones((3,time_size,visual_size[1],visual_size[0]),dtype = np.uint8)
-        gray_short_view = np.ones((3,time_size,visual_size[1],visual_size[0]),dtype = np.uint8)
-        color_long_view = np.ones((3,time_size,visual_size[1],visual_size[0]),dtype = np.uint8)
-        color_short_view = np.zeros((3,time_size,visual_size[1],visual_size[0]),dtype = np.uint8)
+    def __load_arrays(self, video_names, time_size, visual_size): # TODO (8, 320, 256, 3)
+        gray_long_view = np.ones((3,time_size,visual_size[0],visual_size[1]),dtype = np.uint8)
+        gray_short_view = np.ones((3,time_size,visual_size[0],visual_size[1]),dtype = np.uint8)
+        color_long_view = np.ones((3,time_size,visual_size[0],visual_size[1]),dtype = np.uint8)
+        color_short_view = np.zeros((3,time_size,visual_size[0],visual_size[1]),dtype = np.uint8)
         effective_views = dict(gray_long_view = False, gray_short_view = False,color_long_view = False,color_short_view = False)
         with self.env.begin(write=False) as txn:
             for video_name in video_names:
@@ -171,11 +173,12 @@ if __name__ == "__main__":
     hv = HartValve(state="train") 
     logger.info(hv.get_weighted_count())
     start = time.time()
-    labels_list = [0 for i in range(2)]
-    for index, datas in tqdm.tqdm(enumerate(hv)):
-        labels_list[datas["label"].item()] += 1
-        if index%10==0:
-            logger.info(f"{datas['patient_name']},{datas['video_names']},{datas['effective_views']},{datas['effective_views_tensors']['gray_long_view'].shape},{datas['effective_views_tensors']['gray_short_view'].shape},{datas['effective_views_tensors']['color_long_view'].shape},{datas['effective_views_tensors']['color_short_view'].shape}")
-    fps = len(hv) / (time.time() - start)
-    logger.info (fps)
-    logger.info (labels_list)
+    # labels_list = [0 for i in range(2)]
+    # for index, datas in tqdm.tqdm(enumerate(hv)):
+    #     labels_list[datas["label"].item()] += 1
+    #     if index%10==0:
+    #         logger.info(f"{datas['patient_name']},{datas['video_names']},{datas['effective_views']},{datas['effective_views_tensors']['gray_long_view'].shape},{datas['effective_views_tensors']['gray_short_view'].shape},{datas['effective_views_tensors']['color_long_view'].shape},{datas['effective_views_tensors']['color_short_view'].shape}")
+    # fps = len(hv) / (time.time() - start)
+    # logger.info (fps)
+    # logger.info (labels_list)
+    

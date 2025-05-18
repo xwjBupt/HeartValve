@@ -2,3 +2,8 @@
 *.log
 play*
 *.pyth
+*.pyc
+*.yaml
+output_runs/*
+Lib/__pycache__/*
+Lib/__pycache__/metric.cpython-312.pyc

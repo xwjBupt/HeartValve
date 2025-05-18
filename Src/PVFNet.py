@@ -2940,25 +2940,25 @@ class PVFNet(nn.Module):
         #     else None
         # )
 
-    def forward(self, effective_views:dict, view: dict, **kwargs):
+    def forward(self, effective_views:dict, view: dict, device, **kwargs):
         effective_out_views = {}
         for k,v in effective_views.items():
-            if k == 'gray_long_view' and v is True:
-              effective_out_views['gray_long_view'] = self.gray_long_model(view['gray_long_view'])
-            elif k == 'gray_short_view' and v is True:
-              effective_out_views['gray_short_view'] = self.gray_short_model(view['gray_short_view'])
-            elif k == 'color_long_view' and v is True:
-              effective_out_views['color_long_view']  = self.color_long_model(view['color_long_view'])
-            elif k == 'color_short_view' and v is True:
-              effective_out_views['color_short_view'] = self.color_short_model(view['color_short_view'])
+            if k == 'gray_long_view' and v.item() is True:
+              effective_out_views['gray_long_view'] = self.gray_long_model(view['gray_long_view'].to(device, non_blocking=True))
+            elif k == 'gray_short_view' and v.item() is True:
+              effective_out_views['gray_short_view'] = self.gray_short_model(view['gray_short_view'].to(device, non_blocking=True))
+            elif k == 'color_long_view' and v.item() is True:
+              effective_out_views['color_long_view']  = self.color_long_model(view['color_long_view'].to(device, non_blocking=True))
+            elif k == 'color_short_view' and v.item() is True:
+              effective_out_views['color_short_view'] = self.color_short_model(view['color_short_view'].to(device, non_blocking=True))
 
         # FUSE
 
         # main output TODO add different fuse method to get the main output
         main_last_outputs = []
         for k,v in effective_out_views.items():
-            main_last_outputs.append(v[-1])
-        main_last_output = self.main_last_output_marc_linear(torch.cat(main_last_outputs,dim = 0))
+            main_last_outputs.append(v[-1]) #torch.Size([1, 2048, 1, 1, 1])
+        main_last_output = self.main_last_output_marc_linear(torch.sum(torch.cat(main_last_outputs,dim = 0),dim=0, keepdim = True))
             
         # # side output
         # cor_output = self.coronal_marc_linear(cor_middel_list[-1])

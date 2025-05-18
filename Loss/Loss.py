@@ -525,7 +525,7 @@ class DistanceLoss(nn.Module):
 class LabelSmoothingCrossEntropy(nn.Module):
     """NLL loss with label smoothing."""
 
-    def __init__(self, smoothing=0.1, use_dict=True):
+    def __init__(self, smoothing=0.1, use_dict=True,**kwargs):
         super(LabelSmoothingCrossEntropy, self).__init__()
         assert smoothing < 1.0
         self.smoothing = smoothing
