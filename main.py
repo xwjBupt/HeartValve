@@ -46,7 +46,7 @@ def get_arguments(args):
     # Load config from command line, overwrite config from opts.
     if args.opts is not None:
         cfg.merge_from_list(args.opts)
-    if not args.no_debug:
+    if not args.nodebug:
         cfg.METHOD.Name = "DEBUG"
         cfg.BASIC.DEBUG = True
     if cfg.BASIC.Seed == 1:
@@ -568,7 +568,7 @@ def main(cfg):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Update custom params")
     parser.add_argument(
-        "--no_debug",
+        "--nodebug",
         action="store_true",
         help="weather in debug mode, given = no debug, not given  = in debug",
     )

@@ -660,17 +660,18 @@ def get_metrics(
         np.where(diff_fuse == 1, 1, 0).sum() + np.where(diff_fuse == 0, 1, 0).sum()
     ) / num_samples
     if pred_logit is not None:
-        if pred_logit.shape[1] == 4:
-            class_names = ["T0/1", "T2a", "T2b", "T3"]
-        elif pred_logit.shape[1] == 5:
-            class_names = ["T0", "T1", "T2a", "T2b", "T3"]
-        elif pred_logit.shape[1] == 2:
-            class_names = ["Tb", "Tg"]
-        else:
-            assert False, "class number not right {}".format(pred_logit.shape[1])
+        class_names = ["Tb", "Tg"]
+        # if pred_logit.shape[1] == 4:
+        #     class_names = ["T0/1", "T2a", "T2b", "T3"]
+        # elif pred_logit.shape[1] == 5:
+        #     class_names = ["T0", "T1", "T2a", "T2b", "T3"]
+        # elif pred_logit.shape[1] == 2:
+        #     class_names = ["Tb", "Tg"]
+        # else:
+        #     assert False, "class number not right {}".format(pred_logit.shape[1])
         auc = auc_and_roc_curve(
             torch.Tensor(gt_array),
-            pred_logit,
+            torch.Tensor(pred_logit),
             class_names,
             save_path=save_path,
         )

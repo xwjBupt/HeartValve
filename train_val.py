@@ -28,6 +28,7 @@ def train(
     tbar = tqdm(dataloader, dynamic_ncols=True)
     gt_labels = []
     pred_labels_fuse = []
+    pred_label_fuse_logits = []
     net.train()
     name_pred_dict = {}
     for index, data in enumerate(tbar):
@@ -46,8 +47,11 @@ def train(
         optimizer.step()
 
         pred_label_fuse = (
-            torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1).detach().cpu()
+            torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1).detach().cpu() # TODO FIX AUC BUGS
         )
+        pred_label_fuse_logits.append(
+                    F.softmax(pred_logits[0], dim=-1).detach().cpu()
+                )
         pred_labels_fuse.append(pred_label_fuse.unsqueeze(0))
         pred_label_fuse = [str(i.item()) for i in list(pred_labels_fuse)]
         for name, pred in zip(patient_name, pred_label_fuse):
@@ -60,7 +64,7 @@ def train(
             )
     gt_labels_flat = list(torch.cat(gt_labels, dim=0).squeeze(dim=-1).numpy())
     pred_labels_fuse_flat = list(torch.cat(pred_labels_fuse).numpy())
-    metrics.update(**get_metrics(gt_labels_flat, pred_labels_fuse_flat, index=""))
+    metrics.update(**get_metrics(gt_labels_flat, pred_labels_fuse_flat,pred_logit=torch.cat(pred_label_fuse_logits, 0).numpy(), index=""))
     return (
         net,
         loss_logger,
@@ -91,6 +95,7 @@ def val(
     pred_labels_fuse = []
     pred_labels_cor = []
     pred_labels_sag = []
+    pred_label_fuse_logits = []
     net.eval()
     name_pred_dict = {}
     for index, data in enumerate(tbar):
@@ -106,6 +111,9 @@ def val(
         pred_label_fuse = (
             torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1).detach().cpu()
         )
+        pred_label_fuse_logits.append(
+                    F.softmax(pred_logits[0], dim=-1).detach().cpu()
+                )
         pred_labels_fuse.append(pred_label_fuse.unsqueeze(0))
         pred_label_fuse = [str(i.item()) for i in list(pred_labels_fuse)]
         for name, pred in zip(patient_name, pred_label_fuse):
@@ -118,7 +126,7 @@ def val(
             )
     gt_labels_flat = list(torch.cat(gt_labels, dim=0).squeeze(dim=-1).numpy())
     pred_labels_fuse_flat = list(torch.cat(pred_labels_fuse).numpy())
-    metrics.update(**get_metrics(gt_labels_flat, pred_labels_fuse_flat, index=""))
+    metrics.update(**get_metrics(gt_labels_flat, pred_labels_fuse_flat, pred_logit=torch.cat(pred_label_fuse_logits, 0).numpy(),index=""))
     return (
         net,
         loss_logger,

@@ -155,28 +155,21 @@ def infer(
         with torch.no_grad():
             for index, data in enumerate(tbar):
                 label = data.get("label")
-                names = names + data.get("patient_name")
+                patient_name = data['patient_name']
                 if label is not None:
-                    gt_labels.append(label.squeeze())
-                effective_views_tensors = data["effective_views_tensors"].to(device, non_blocking=True)
+                    gt_labels.append(label)
+                effective_views_tensors = data["effective_views_tensors"]
                 effective_views = data["effective_views"]
-                pred_logits = net(effective_views,effective_views_tensors)
-
-        
-
-                pred_label_fuse = (
-                    torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1)
-                    .detach()
-                    .cpu()
-                )
+                pred_logits = net(effective_views,effective_views_tensors,device)
                 pred_label_fuse_logits.append(
                     F.softmax(pred_logits[0], dim=-1).detach().cpu()
                 )
-                
-                pred_label_fuse_tags.append(pred_label_fuse)
-                pred_labels_fuse.append(pred_label_fuse)
-                pred_label_fuse = [str(i.item()) for i in list(pred_label_fuse)]
-                for name, pred in zip(data["name"], pred_label_fuse):
+                pred_label_fuse = (
+                    torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1).detach().cpu()
+                )
+                pred_labels_fuse.append(pred_label_fuse.unsqueeze(0))
+                pred_label_fuse = [str(i.item()) for i in list(pred_labels_fuse)]
+                for name, pred in zip(patient_name, pred_label_fuse):
                     name_pred_dict[name] = pred
 
             if label is not None:

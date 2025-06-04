@@ -2952,8 +2952,6 @@ class PVFNet(nn.Module):
             elif k == 'color_short_view' and v.item() is True:
               effective_out_views['color_short_view'] = self.color_short_model(view['color_short_view'].to(device, non_blocking=True))
 
-        # FUSE
-
         # main output TODO add different fuse method to get the main output
         main_last_outputs = []
         for k,v in effective_out_views.items():
