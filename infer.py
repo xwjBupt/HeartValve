@@ -162,18 +162,18 @@ def infer(
                 effective_views = data["effective_views"]
                 pred_logits = net(effective_views,effective_views_tensors,device)
                 pred_label_fuse_logits.append(
-                    F.softmax(pred_logits[0], dim=-1).detach().cpu()
+                    F.softmax(pred_logits, dim=-1).detach().cpu()
                 )
                 pred_label_fuse = (
-                    torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1).detach().cpu()
+                    torch.argmax(F.softmax(pred_logits, dim=-1), dim=-1).detach().cpu()
                 )
-                pred_labels_fuse.append(pred_label_fuse.unsqueeze(0))
+                pred_labels_fuse.append(pred_label_fuse)
                 pred_label_fuse = [str(i.item()) for i in list(pred_labels_fuse)]
                 for name, pred in zip(patient_name, pred_label_fuse):
                     name_pred_dict[name] = pred
 
             if label is not None:
-                gt_labels_flat = list(torch.cat(gt_labels).numpy())
+                gt_labels_flat = list(torch.cat(gt_labels, dim=0).squeeze(dim=-1).numpy())
                 pred_labels_fuse_flat = list(torch.cat(pred_labels_fuse).numpy())
                 infer_fuse_cm = confusion_matrix(gt_labels_flat, pred_labels_fuse_flat)
                 infer_cm = [infer_fuse_cm]
@@ -221,20 +221,20 @@ def infer(
                             metrics.lineout(),
                         )
                     )
-            logits_to_label = get_logits_to_label(
-                infer_path
-                + "/Epoch_%s#%s_%s_logits_to_label.csv"
-                % (epoch_nr, phase_index, state),
-                pred_label_fuse_logits,
-                pred_label_fuse_tags,
-                gt_labels,
-                names=names,
-            )
-            logger.info(
-                " {} logits_to_label with format as [ pred_label_fuse_logits - pred_label_fuse_tags(1) - gt_labels(1) ]\n{}".format(
-                    state, logits_to_label
-                )
-            )
+            # logits_to_label = get_logits_to_label(
+            #     infer_path
+            #     + "/Epoch_%s#%s_%s_logits_to_label.csv"
+            #     % (epoch_nr, phase_index, state),
+            #     pred_label_fuse_logits,
+            #     pred_label_fuse_tags,
+            #     gt_labels,
+            #     names=names,
+            # )
+            # logger.info(
+            #     " {} logits_to_label with format as [ pred_label_fuse_logits - pred_label_fuse_tags(1) - gt_labels(1) ]\n{}".format(
+            #         state, logits_to_label
+            #     )
+            # )
 
             write_json(
                 name_pred_dict,
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Infer your model")
     parser.add_argument(
         "--infer_path",
-        default="/ai/mnt/code/DSFNet_MTICI/output_runs/mTICI_Dual_LMDB/DVCNet/DUAL_VIEW-ALL-fuse01-T08#V512-RENAMED/11_11-10_55#COR_Kinect-SAG_Kinect-CVFMTrans_(drop0,head8,expand8,4STPE)_OptScaler20-LabelSmoothSeasaw_MISO_blance_0.8,1.2_q1-TIO_AUG_stablenorm_EroDilK3-noclip-DS13-init0914-fixdataset-fixmlp-fixloss/",  # 'Vessel/ToTest/UNetWithAttetnion/02_19-17_52/',
+        default="/home/wjx/data/code/HeartValve/output_runs/HartValve/DEBUG/T08H320W256/2025-0604-1745#CVFM-LabelSmoothingCrossEntropy/",  # 'Vessel/ToTest/UNetWithAttetnion/02_19-17_52/',
         help="the path of experiments to infer",
         type=str,
     )

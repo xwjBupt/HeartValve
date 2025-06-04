@@ -47,12 +47,12 @@ def train(
         optimizer.step()
 
         pred_label_fuse = (
-            torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1).detach().cpu() # TODO FIX AUC BUGS
+            torch.argmax(F.softmax(pred_logits, dim=-1), dim=-1).detach().cpu() # TODO FIX AUC BUGS
         )
         pred_label_fuse_logits.append(
-                    F.softmax(pred_logits[0], dim=-1).detach().cpu()
+                    F.softmax(pred_logits, dim=-1).detach().cpu()
                 )
-        pred_labels_fuse.append(pred_label_fuse.unsqueeze(0))
+        pred_labels_fuse.append(pred_label_fuse)
         pred_label_fuse = [str(i.item()) for i in list(pred_labels_fuse)]
         for name, pred in zip(patient_name, pred_label_fuse):
             name_pred_dict[name] = pred
@@ -109,12 +109,12 @@ def val(
         loss_logger.update(**loss_dict)
 
         pred_label_fuse = (
-            torch.argmax(F.softmax(pred_logits[0], dim=-1), dim=-1).detach().cpu()
+            torch.argmax(F.softmax(pred_logits, dim=-1), dim=-1).detach().cpu()
         )
         pred_label_fuse_logits.append(
-                    F.softmax(pred_logits[0], dim=-1).detach().cpu()
+                    F.softmax(pred_logits, dim=-1).detach().cpu()
                 )
-        pred_labels_fuse.append(pred_label_fuse.unsqueeze(0))
+        pred_labels_fuse.append(pred_label_fuse)
         pred_label_fuse = [str(i.item()) for i in list(pred_labels_fuse)]
         for name, pred in zip(patient_name, pred_label_fuse):
             name_pred_dict[name] = pred

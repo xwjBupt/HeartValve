@@ -7,3 +7,8 @@ play*
 output_runs/*
 Lib/__pycache__/*
 Lib/__pycache__/metric.cpython-312.pyc
+Lib/__pycache__/__init__.cpython-312.pyc
+Lib/__pycache__/lib.cpython-312.pyc
+__pycache__/*
+*wandb*
+*.csv

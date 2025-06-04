@@ -114,6 +114,7 @@ def main(cfg):
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.deterministic = True
     # torch.backends.cudnn.enabled = False
+    os.environ["CUDA_VISIBLE_DEVICES"] = cfg.BASIC.Num_gpus
     num_gpus = torch.cuda.device_count()
     if num_gpus == 0:
         device = "cpu"
