@@ -162,10 +162,10 @@ def infer(
                 effective_views = data["effective_views"]
                 pred_logits = net(effective_views,effective_views_tensors,device)
                 pred_label_fuse_logits.append(
-                    F.softmax(pred_logits, dim=-1).detach().cpu()
+                    F.sigmoid(pred_logits).detach().cpu()
                 )
                 pred_label_fuse = (
-                    torch.argmax(F.softmax(pred_logits, dim=-1), dim=-1).detach().cpu()
+                    torch.argmax(F.sigmoid(pred_logits), dim=-1).detach().cpu()
                 )
                 pred_labels_fuse.append(pred_label_fuse)
                 pred_label_fuse = [str(i.item()) for i in list(pred_labels_fuse)]

@@ -2731,7 +2731,6 @@ class PVFNet(nn.Module):
         head_activation: Callable = None,
         head_output_with_global_average: bool = False,
         backbone_pretrained='/home/wjx/data/code/HeartValve/Src/X3D_M-Kinect.pyth',
-        all_pretrained=None,
         use_marc=True,
         with_stem: bool = True,
         with_fusion: list = [None, None, None, None],
@@ -2819,6 +2818,8 @@ class PVFNet(nn.Module):
                     gray_long_unloaded_keys.append(k)
             self.gray_long_model.load_state_dict(gray_long_new_state_dict, strict=False)
             cprint("gray_long_model_unloaded_keys {}".format(gray_long_unloaded_keys), color="yellow")
+        else:
+            cprint("No backbone pretrained weights loaded", color="yellow")
 
         self.gray_short_model = copy.deepcopy(self.gray_long_model)
         self.color_long_model = copy.deepcopy(self.gray_long_model)

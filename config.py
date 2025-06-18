@@ -71,27 +71,30 @@ _C.SCHEDULER.Para.T_0 = 35
 _C.SCHEDULER.Para.T_mult = 2
 _C.SCHEDULER.Para.eta_min = 1.0e-6
 
-_C.LOSS = CN()
-_C.LOSS.Name = "LabelSmoothingCrossEntropy"
-_C.LOSS.Para = CN()
-_C.LOSS.Para.balance = [
-    [0.8, 1.2],
-    [0.8, 1.2],
-    [0.8, 1.2],
-    [0.4, 0.6],
-    [0.4, 0.6],
-    [0.2, 0.3],
-    [0.2, 0.3],
-    [0.1, 0.15],
-    [0.1, 0.15],
-]
-_C.LOSS.Para.smoothing = 0.4
-_C.LOSS.Para.keep_rate = 0.55
-_C.LOSS.Para.num_classes = num_classes
-_C.LOSS.Para.p = 0.8
-_C.LOSS.Para.q = 1.0
-_C.LOSS.Para.eps = 1e-2
+# _C.LOSS = CN()
+# _C.LOSS.Name = "LabelSmoothingCrossEntropy"
+# _C.LOSS.Para = CN()
+# _C.LOSS.Para.balance = [
+#     [0.8, 1.2],
+#     [0.8, 1.2],
+#     [0.8, 1.2],
+#     [0.4, 0.6],
+#     [0.4, 0.6],
+#     [0.2, 0.3],
+#     [0.2, 0.3],
+#     [0.1, 0.15],
+#     [0.1, 0.15],
+# ]
+# _C.LOSS.Para.smoothing = 0.4
+# _C.LOSS.Para.keep_rate = 0.55
+# _C.LOSS.Para.num_classes = num_classes
+# _C.LOSS.Para.p = 0.8
+# _C.LOSS.Para.q = 1.0
+# _C.LOSS.Para.eps = 1e-2
 
+_C.LOSS = CN()
+_C.LOSS.Name = "BCEFocalLoss"
+_C.LOSS.Para = CN()
 
 _C.MODEL = CN()
 _C.MODEL.Name = "PVFNet"
@@ -105,9 +108,10 @@ _C.MODEL.Para.mlp_dropout_rate = 0
 _C.MODEL.Para.num_heads = 8
 _C.MODEL.Para.expand_dim = 8
 _C.MODEL.Para.deep_super = [False, True, False, True]
-_C.MODEL.Para.fuse_pretrained = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), "Src", "X3D_M-Kinect.pyth"
-)
+# _C.MODEL.Para.fuse_pretrained = os.path.join(
+#     os.path.dirname(os.path.realpath(__file__)), "Src", "X3D_M-Kinect.pyth"
+# )
+_C.MODEL.Para.backbone_pretrained = None
 
 _C.METHOD = CN()
 _C.METHOD.Desc = "T%02dH%03dW%03d/%s-%s" % (
@@ -117,5 +121,5 @@ _C.METHOD.Desc = "T%02dH%03dW%03d/%s-%s" % (
     _C.MODEL.Para.use_fusion,
     _C.LOSS.Name,
 )
-_C.METHOD.Detail_Desc = "oversample-lmdb-fixpre-Pre_withbeforetrain-4 sptial temoral position embedding(4STPE)"
+_C.METHOD.Detail_Desc = "oversample-lmdb-fixpre-Pre_Nopretrain"
 _C.METHOD.Name = _C.MODEL.Name

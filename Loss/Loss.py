@@ -545,11 +545,12 @@ class LabelSmoothingCrossEntropy(nn.Module):
 
 
 class BCEFocalLoss(torch.nn.Module):
-    def __init__(self, gamma=2, alpha=0.25, reduction="mean"):
+    def __init__(self, gamma=2, alpha=0.25, reduction="mean",use_dict=True,**kwargs):
         super(BCEFocalLoss, self).__init__()
         self.gamma = gamma
         self.alpha = alpha
         self.reduction = reduction
+        self.use_dict=use_dict
 
     def forward(self, predict, target):
         pt = torch.sigmoid(predict)  # sigmoide获取概率
@@ -562,7 +563,11 @@ class BCEFocalLoss(torch.nn.Module):
             loss = torch.mean(loss)
         elif self.reduction == "sum":
             loss = torch.sum(loss)
-        return loss
+        if self.use_dict:
+            return loss, dict(loss=loss.item())
+        else:
+            return loss
+
 
 
 class OVALoss(nn.Module):
