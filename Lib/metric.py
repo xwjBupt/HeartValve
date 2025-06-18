@@ -1,4 +1,4 @@
-# Copyright (c) OpenMMLab. All rights reserved.
+# # Copyright (c) OpenMMLab. All rights reserved.
 from numbers import Number
 
 import numpy as np
@@ -8,6 +8,21 @@ from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn.metrics as skmet
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import (
+    accuracy_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    precision_recall_curve,
+    average_precision_score,
+    roc_curve,
+    auc,
+    confusion_matrix,
+)
+import seaborn as sns
 
 
 def auc_and_roc_curve(
@@ -422,36 +437,6 @@ def recall(pred, target, average_mode="macro", thrs=0.0):
     return recalls
 
 
-def f1_score(pred, target, average_mode="macro", thrs=0.0):
-    """Calculate F1 score according to the prediction and target.
-
-    Args:
-        pred (torch.Tensor | np.array): The model prediction with shape (N, C).
-        target (torch.Tensor | np.array): The target of each prediction with
-            shape (N, 1) or (N,).
-        average_mode (str): The type of averaging performed on the result.
-            Options are 'macro' and 'none'. If 'none', the scores for each
-            class are returned. If 'macro', calculate metrics for each class,
-            and find their unweighted mean.
-            Defaults to 'macro'.
-        thrs (Number | tuple[Number], optional): Predictions with scores under
-            the thresholds are considered negative. Default to 0.
-
-    Returns:
-         float | np.array | list[float | np.array]: F1 score.
-
-        +----------------------------+--------------------+-------------------+
-        | Args                       | ``thrs`` is number | ``thrs`` is tuple |
-        +============================+====================+===================+
-        | ``average_mode`` = "macro" | float              | list[float]       |
-        +----------------------------+--------------------+-------------------+
-        | ``average_mode`` = "none"  | np.array           | list[np.array]    |
-        +----------------------------+--------------------+-------------------+
-    """
-    _, _, f1_scores = precision_recall_f1(pred, target, average_mode, thrs)
-    return f1_scores
-
-
 def average_precision(pred, target):
     r"""Calculate the average precision for a single class.
 
@@ -687,3 +672,171 @@ def get_metrics(
     results["f1%s" % index] = f1.mean()
     results["auc%s" % index] = auc
     return results
+
+
+def save_confusion_matrix(
+    y_true, y_pred, epoch, log_dir, phase, num_classes=2, task_type="binary"
+):
+    """
+    绘制并保存混淆矩阵
+    :param y_true: 真实标签
+    :param y_pred: 预测标签
+    :param epoch: 当前 epoch
+    :param log_dir: 保存图像的文件夹
+    :param num_classes: 类别数量，默认为二分类（2）
+    :param task_type: 任务类型，'binary' 或 'multiclass'
+    """
+    cm = confusion_matrix(y_true, y_pred)
+
+    plt.figure(figsize=(6, 6))
+    ax = sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        cbar=False,
+        xticklabels=[f"Class {i}" for i in range(num_classes)],
+        yticklabels=[f"Class {i}" for i in range(num_classes)],
+    )
+
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
+    ax.set_title(f"Confusion Matrix (Epoch {epoch})")
+
+    plt.savefig(f"{log_dir}/{phase}_cm_epoch{epoch}.png")
+    plt.close()
+    return cm
+
+
+def calculate_and_save_metrics(
+    y_true, logits, epoch, log_dir, phase, num_classes=2, threshold=0.5
+):
+    """
+    计算指标（Acc, F1, AUC, AP, Recall等），并保存 ROC 和 PR 曲线图片
+    :param y_true: 真实标签 (Numpy array)
+    :param logits: 模型输出的 logits (Tensor)
+    :param epoch: 当前 epoch
+    :param log_dir: 保存文件的目录
+    :param num_classes: 类别数量，默认为二分类（2）
+    :param threshold: 二分类的预测阈值
+    """
+    # === 确定任务类型 ===
+    if logits.ndimension() == 1 or logits.size(1) == 1 or num_classes == 2:
+        # 二分类
+        task_type = "binary"
+        probs = torch.sigmoid(logits.view(-1)).detach().cpu().numpy()
+        preds = (probs >= threshold).astype(int)
+        auc_score = roc_auc_score(y_true, probs)
+        ap = average_precision_score(y_true, probs)
+
+        # === 绘制 ROC 和 PR 曲线 ===
+        fpr, tpr, _ = roc_curve(y_true, probs)
+        save_roc_curve(fpr, tpr, auc_score, epoch, log_dir, phase, task_type)
+
+        precision, recall, _ = precision_recall_curve(y_true, probs)
+        save_pr_curve(precision, recall, ap, epoch, log_dir, phase, task_type)
+        recall = recall_score(y_true, preds, average="binary", zero_division=0)
+        f1 = f1_score(y_true, preds, average="binary", zero_division=0)
+
+    else:
+        # 多分类
+        task_type = "multiclass"
+        probs = torch.softmax(logits, dim=1).detach().cpu().numpy()
+        preds = np.argmax(probs, axis=1)
+        auc_score = roc_auc_score(y_true, probs, multi_class="ovo", average="macro")
+
+        ap_scores = [
+            average_precision_score((y_true == i).astype(int), probs[:, i])
+            for i in range(probs.shape[1])
+        ]
+        ap = np.mean(ap_scores)
+
+        # === 绘制 ROC 和 PR 曲线 ===
+        for i in range(probs.shape[1]):
+            fpr, tpr, _ = roc_curve((y_true == i).astype(int), probs[:, i])
+            save_roc_curve(fpr, tpr, auc(fpr, tpr), epoch, log_dir, phase, task_type, i)
+
+            precision, recall, _ = precision_recall_curve(
+                (y_true == i).astype(int), probs[:, i]
+            )
+            save_pr_curve(
+                precision, recall, ap_scores[i], epoch, log_dir, phase, task_type, i
+            )
+        recall = recall_score(y_true, preds, average="macro", zero_division=0)
+        f1 = f1_score(y_true, preds, average="macro", zero_division=0)
+    # === 计算常用指标 ===
+    acc = accuracy_score(y_true, preds)
+
+    # === 绘制并保存混淆矩阵 ===
+    cm = save_confusion_matrix(
+        y_true, preds, epoch, log_dir, phase, num_classes, task_type
+    )
+    metrics = {
+        "acc": round(acc, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
+        "auc": round(auc_score, 4),
+        "ap": round(ap, 4),
+    }
+
+    return metrics, cm
+
+
+def save_roc_curve(
+    fpr, tpr, auc_score, epoch, log_dir, phase, task_type, class_id=None
+):
+    """
+    保存 ROC 曲线
+    :param fpr: 假阳性率
+    :param tpr: 真阳性率
+    :param auc_score: AUC 分数
+    :param epoch: 当前 epoch
+    :param log_dir: 保存的文件夹
+    :param phase: train or val
+    :param task_type: 任务类型（'binary' 或 'multiclass'）
+    :param class_id: 类别 id（仅多分类时需要）
+    """
+    plt.figure()
+    if task_type == "binary":
+        plt.plot(fpr, tpr, label=f"AUC = {auc_score:.2f}")
+    else:
+        plt.plot(fpr, tpr, label=f"Class {class_id} AUC = {auc_score:.2f}")
+    plt.plot([0, 1], [0, 1], "k--")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title(f"ROC Curve (Epoch {epoch})")
+    plt.legend(loc="lower right")
+    plt.grid(True)
+    if task_type == "binary":
+        plt.savefig(f"{log_dir}/{phase}_roc_epoch{epoch}.png")
+    else:
+        plt.savefig(f"{log_dir}/{phase}_roc_class{class_id}_epoch{epoch}.png")
+    plt.close()
+
+
+def save_pr_curve(
+    precision, recall, ap_score, epoch, log_dir, phase, task_type, class_id=None
+):
+    """
+    保存 PR 曲线
+    :param precision: 精度
+    :param recall: 召回率
+    :param ap_score: 平均精度
+    :param epoch: 当前 epoch
+    :param log_dir: 保存的文件夹
+    :param phase: train or val
+    :param task_type: 任务类型（'binary' 或 'multiclass'）
+    :param class_id: 类别 id（仅多分类时需要）
+    """
+    plt.figure()
+    plt.plot(recall, precision, label=f"AP = {ap_score:.2f}")
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.title(f"PR Curve (Epoch {epoch})")
+    plt.legend(loc="lower left")
+    plt.grid(True)
+    if task_type == "binary":
+        plt.savefig(f"{log_dir}/{phase}_pr_epoch{epoch}.png")
+    else:
+        plt.savefig(f"{log_dir}/{phase}_pr_class{class_id}_epoch{epoch}.png")
+    plt.close()

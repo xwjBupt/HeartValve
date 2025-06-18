@@ -24,7 +24,6 @@ from multiprocessing import Pool
 from typing import Callable, List, Optional, Tuple
 from functools import partial
 
-
 class SmoothedValue(object):
     """Track a series of values and provide access to smoothed values over a
     window or the global series average.

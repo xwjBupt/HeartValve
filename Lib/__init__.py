@@ -6,6 +6,7 @@ from Lib.metric import (
     f1_score,
     get_metrics,
     plot_confusion_matrix,
+    calculate_and_save_metrics
 )
 from Lib.lib import (
     read_pickle,

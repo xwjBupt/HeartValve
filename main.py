@@ -12,6 +12,7 @@ import wandb
 import numpy as np
 import pdb
 import setproctitle
+import matplotlib.pyplot as plt
 import json
 from yacs.config import CfgNode as CN
 import torch.multiprocessing as mp
@@ -25,10 +26,12 @@ from Lib import (
     write_yaml,
     iter_update_dict,
     update_config,
+    MetricLogger,
     nodeTodict,
     iter_wandb_log,
     write_json,
     plot_confusion_matrix,
+    calculate_and_save_metrics,
 )
 from builder import build_loader, build_opt, build_loss, build_scheduler, build_model
 from train_val import train, val
@@ -194,6 +197,10 @@ def main(cfg):
     logger.info(net)
     logger.info(">>> START TRAINING <<<")
     wandb.watch(net, loss, log="all", log_freq=5)
+
+    train_metich_logger = MetricLogger()
+    val_metich_logger = MetricLogger()
+    num_classes = cfg.MODEL.Para.model_num_class
     try:
         for epoch in range(start_epoch + 1, cfg.BASIC.Epochs, 1):
             epoch_start = time.time()
@@ -220,11 +227,9 @@ def main(cfg):
             iter_dis = len(train_dataloader) // (len(train_dataloader) // 10 + 1) + 3
             (
                 net,
-                train_loss,
-                train_gt_labels,
-                train_pred_fuse_labels,
-                train_metrics,
-                train_name_pred_dict,
+                train_loss_logger,
+                train_labels,
+                train_logits,
             ) = train(
                 net,
                 device,
@@ -235,19 +240,42 @@ def main(cfg):
                 iter_dis,
                 wandb=wandb,
             )
-            train_cm_fuse = confusion_matrix(train_gt_labels, train_pred_fuse_labels)
-            train_cm = [train_cm_fuse]
+
+            train_metrics, train_cm = calculate_and_save_metrics(
+                train_labels,
+                train_logits,
+                epoch,
+                log_dir=save_model,
+                phase="train",
+                num_classes=num_classes,
+                threshold=0.5,
+            )
+
+            train_metich_logger.update(**train_metrics)
             train_fps = (time.time() - train_start) / len(train_dataloader)
             train_time = time.time() - train_start
             logger.info(
                 ">>> TRAIN EPOCH: %d TIME: %.4f FPS: %.4f LOSS: %s  <<<"
-                % (epoch, train_time, train_fps, train_loss.lineout())
+                % (epoch, train_time, train_fps, train_loss_logger.lineout())
             )
 
             logger.info(
-                ">>> TRAIN CLASSIFICATION METRICS || %s || <<< \n"
-                % (train_metrics.lineout())
+                ">>> TRAIN CLASSIFICATION METRICS || {} || <<< \n train_confusion_matrix \n {} \n".format(
+                    train_metich_logger.lineout(), train_cm
+                )
             )
+            plt.figure(figsize=(8, 4))
+            plt.hist(
+                train_logits, bins=50, range=(0, 1), color="skyblue", edgecolor="black"
+            )
+            plt.title("Epoch %03d output logit distribution" % (epoch))
+            plt.xlabel("Sigmoid Output (train Predicted Probability)")
+            plt.ylabel("Count")
+            plt.grid(True)
+            plt.savefig(
+                save_model + "/train_sigmoid_output_logit_Epoch%04d.png" % (epoch)
+            )
+            plt.close()
 
             ### TRAIN STOP ###
 
@@ -256,11 +284,9 @@ def main(cfg):
             iter_dis = len(val_dataloader) // (len(val_dataloader) // 20 + 1) + 3
             (
                 net,
-                val_loss,
-                val_gt_labels,
-                val_pred_fuse_labels,
-                val_metrics,
-                val_name_pred_dict,
+                val_loss_logger,
+                val_labels,
+                val_logits,
             ) = val(
                 net,
                 device,
@@ -268,30 +294,48 @@ def main(cfg):
                 epoch,
                 loss,
                 iter_dis=iter_dis,
-                savename=save_model + "/VAL_Confusion_Matrix_%04d.png" % (epoch),
             )
 
-            val_cm_fuse = confusion_matrix(val_gt_labels, val_pred_fuse_labels)
-            val_cm = [val_cm_fuse]
+            val_metrics, val_cm = calculate_and_save_metrics(
+                val_labels,
+                val_logits,
+                epoch,
+                log_dir=save_model,
+                phase="val",
+                num_classes=num_classes,
+                threshold=0.5,
+            )
+            val_metich_logger.update(**val_metrics)
             val_fps = (time.time() - val_start) / len(val_dataloader)
             val_time = time.time() - val_start
             logger.info(
                 ">>> VAL EPOCH: %d TIME: %.4f FPS: %.4f LOSS: %s<<<"
-                % (epoch, val_time, val_fps, val_loss.lineout())
+                % (epoch, val_time, val_fps, val_loss_logger.lineout())
             )
             logger.info(
-                ">>> VAL CLASSIFICATION METRICS || %s || <<< \n"
-                % (val_metrics.lineout())
+                ">>> VAL CLASSIFICATION METRICS || {} || <<< \n val_confusion_matrix \n {} \n".format(
+                    val_metich_logger.lineout(), val_cm
+                )
             )
+
+            plt.figure(figsize=(8, 4))
+            plt.hist(
+                val_logits, bins=50, range=(0, 1), color="skyblue", edgecolor="black"
+            )
+            plt.title("Epoch %03d output logit distribution" % (epoch))
+            plt.xlabel("Sigmoid Output (val Predicted Probability)")
+            plt.ylabel("Count")
+            plt.grid(True)
+            plt.savefig(
+                save_model + "/val_sigmoid_output_logit_Epoch%04d.png" % (epoch)
+            )
+            plt.close()
             ### VAL STOP ###
-            epoch_results = dict(
-                train_name_pred_dict=train_name_pred_dict,
-                val_name_pred_dict=val_name_pred_dict,
-            )
-            iter_wandb_log(wandb, train_loss, phase="TRAIN#", index=epoch)
-            iter_wandb_log(wandb, val_loss, phase="VAL#", index=epoch)
-            iter_wandb_log(wandb, train_metrics, phase="TRAIN#", index=epoch)
-            iter_wandb_log(wandb, val_metrics, phase="VAL#", index=epoch)
+
+            # iter_wandb_log(wandb, train_loss_logger, phase="TRAIN#", index=epoch)
+            # iter_wandb_log(wandb, val_loss_logger, phase="VAL#", index=epoch)
+            # iter_wandb_log(wandb, train_metrics, phase="TRAIN#", index=epoch)
+            # iter_wandb_log(wandb, val_metrics, phase="VAL#", index=epoch)
 
             if epoch > cfg.BASIC.Lr_decay:
                 if cfg.SCHEDULER == "ReduceLROnPlateau":
@@ -305,18 +349,12 @@ def main(cfg):
             )
 
             saved = False
-            current_loss = val_loss.loss.avg
-            current_acc = val_metrics.acc.avg
-            current_acc_smooth = val_metrics.acc_smooth.avg
-            current_recall = val_metrics.recall.avg
-            current_f1 = val_metrics.f1.avg
-            if current_acc_smooth > best_mean_acc_smooth:
-                best_mean_acc_smooth_epoch = epoch
-                best_mean_acc_smooth = current_acc_smooth
-                logger.info(
-                    "Mean_Acc_smooth Metric update to >>> Mean_ACC_Smooth: %.6f @ epoch: %d"
-                    % (best_mean_acc_smooth, epoch)
-                )
+            current_loss = val_loss_logger.loss.avg
+            current_acc = val_metrics.get("acc")
+            current_recall = val_metrics.get("recall")
+            current_f1 = val_metrics.get("f1")
+            current_ap = val_metrics.get("ap")
+            current_auc = val_metrics.get("auc")
 
             if current_f1 > best_mean_f1:
                 best_mean_f1_epoch = epoch
@@ -343,19 +381,7 @@ def main(cfg):
                         save_dict=save_dict,
                         best_f1_flag=True,
                     )
-                    plot_confusion_matrix(
-                        train_cm,
-                        savename=save_model
-                        + "/Train_Fuse_CM_results_%04d.png" % (epoch),
-                    )
-                    plot_confusion_matrix(
-                        val_cm,
-                        savename=save_model + "/Val_Fuse_CM_results_%04d.png" % (epoch),
-                    )
-                    write_json(
-                        epoch_results,
-                        outfile=save_model + "/Best_F1_Val_results_%04d.json" % (epoch),
-                    )
+
                 saved = True
 
             if current_acc > best_mean_acc:
@@ -382,19 +408,7 @@ def main(cfg):
                         save_dict=save_dict,
                         best_acc_flag=True,
                     )
-                    plot_confusion_matrix(
-                        train_cm,
-                        savename=save_model + "/Train_CM_results_%04d.png" % (epoch),
-                    )
-                    plot_confusion_matrix(
-                        val_cm,
-                        savename=save_model + "/Val_CM_results_%04d.png" % (epoch),
-                    )
-                    write_json(
-                        epoch_results,
-                        outfile=save_model
-                        + "/Best_Acc_Val_results_%04d.json" % (epoch),
-                    )
+
                 saved = True
 
             if current_loss < best_mean_loss:
@@ -420,19 +434,7 @@ def main(cfg):
                         save_dict=save_dict,
                         best_loss_flag=True,
                     )
-                    write_json(
-                        epoch_results,
-                        outfile=save_model
-                        + "/Best_Loss_Val_results_%04d.json" % (epoch),
-                    )
-                    plot_confusion_matrix(
-                        train_cm,
-                        savename=save_model + "/Train_CM_results_%04d.png" % (epoch),
-                    )
-                    plot_confusion_matrix(
-                        val_cm,
-                        savename=save_model + "/Val_CM_results_%04d.png" % (epoch),
-                    )
+
                     saved = True
 
             if current_recall > best_mean_recall:
@@ -459,20 +461,7 @@ def main(cfg):
                         save_dict=save_dict,
                         best_recall_flag=True,
                     )
-                    plot_confusion_matrix(
-                        train_cm,
-                        savename=save_model
-                        + "/Train_Fuse_CM_results_%04d.png" % (epoch),
-                    )
-                    plot_confusion_matrix(
-                        val_cm,
-                        savename=save_model + "/Val_Fuse_CM_results_%04d.png" % (epoch),
-                    )
-                    write_json(
-                        epoch_results,
-                        outfile=save_model
-                        + "/Best_Recall_Val_results_%04d.json" % (epoch),
-                    )
+
                 saved = True
 
             else:
@@ -492,18 +481,7 @@ def main(cfg):
                     epoch,
                     save_dict=save_dict,
                 )
-                plot_confusion_matrix(
-                    train_cm,
-                    savename=save_model + "/Checkpoint_TRAIN_CM.png",
-                )
-                plot_confusion_matrix(
-                    val_cm,
-                    savename=save_model + "/Checkpoint_VAL_CM.png",
-                )
-                write_json(
-                    epoch_results,
-                    outfile=save_model + "/Checkpoint_results.json",
-                )
+
             epoch_stop = time.time()
             epoch_time = epoch_stop - epoch_start
             logger.info(

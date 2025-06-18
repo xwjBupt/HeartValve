@@ -2665,7 +2665,7 @@ class SideOut(nn.Module):
             conv_kernel_size=conv_kernel_size,
             conv_stride=conv_stride,
         )
-        self.marc = MARCLinear(out_features=num_classes, in_features=dim_out)
+        self.marc = MARCLinear(out_features=1, in_features=dim_out)
         self.head = create_x3d_head(
             dim_in=dim_inner,
             dim_inner=int(dim_inner * 1.25),
@@ -2757,7 +2757,10 @@ class PVFNet(nn.Module):
             self.visual_bottom_w,
         )
         if self.use_marc:
-            self.main_last_output_marc_linear = MARCLinear(out_features=model_num_class)
+            if model_num_class<=2:
+                self.main_last_output_marc_linear = MARCLinear(out_features=1)
+            else:
+                self.main_last_output_marc_linear = MARCLinear(out_features=model_num_class)
         self.gray_long_model = create_x3d(
             input_channel,
             input_clip_length,
@@ -2792,7 +2795,7 @@ class PVFNet(nn.Module):
             **kwargs,
         )
 
-        if backbone_pretrained and not all_pretrained:
+        if backbone_pretrained:
             checkpoint_all = torch.load(
                 backbone_pretrained, map_location=torch.device("cpu")
             )
