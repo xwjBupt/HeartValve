@@ -720,6 +720,8 @@ def calculate_and_save_metrics(
     :param num_classes: 类别数量，默认为二分类（2）
     :param threshold: 二分类的预测阈值
     """
+    y_true = np.array(y_true).reshape(-1)
+
     # === 确定任务类型 ===
     if logits.ndimension() == 1 or logits.size(1) == 1 or num_classes == 2:
         # 二分类

@@ -2627,6 +2627,49 @@ class MARCLinear(nn.Module):
         return logit_after
 
 
+class AdaptiveNorm(nn.Module):
+    def __init__(self, hidden_dim):
+        super().__init__()
+        self.bn = nn.BatchNorm1d(hidden_dim)
+        self.ln = nn.LayerNorm(hidden_dim)
+
+    def forward(self, x):
+        if self.training and x.size(0) == 1:
+            return self.ln(x)
+        else:
+            return self.bn(x)
+
+
+class StrongRegularizedBinaryHead(nn.Module):
+    def __init__(
+        self,
+        in_channels=2048,
+        hidden_dim=512,
+        dropout_rate=0.5,
+        use_bn=True,
+        use_l2_norm=True,
+    ):
+        super(StrongRegularizedBinaryHead, self).__init__()
+
+        layers = [
+            nn.Flatten(),  # → [B, C]
+            nn.Linear(in_channels, hidden_dim),
+        ]
+        if use_bn:
+            layers.append(AdaptiveNorm(hidden_dim))
+        layers += [nn.ReLU(inplace=True), nn.Dropout(dropout_rate)]
+
+        self.feature_extractor = nn.Sequential(*layers)
+        self.output_layer = nn.Linear(hidden_dim, 1)
+        self.use_l2_norm = use_l2_norm
+
+    def forward(self, x):
+        x = self.feature_extractor(x)
+        if self.use_l2_norm:
+            x = nn.functional.normalize(x, p=2, dim=1)  # L2 Normalization
+        return self.output_layer(x)
+
+
 class SideOut(nn.Module):
     """
     A wrapper for nn.Linear with support of MARC method.
@@ -2763,6 +2806,7 @@ class PVFNet(nn.Module):
                 self.main_last_output_marc_linear = MARCLinear(
                     out_features=model_num_class
                 )
+        self.addhead = StrongRegularizedBinaryHead(in_channels=2048)
         self.gray_long_model = create_x3d(
             input_channel,
             input_clip_length,
@@ -2968,12 +3012,23 @@ class PVFNet(nn.Module):
                 )
 
         # main output TODO add different fuse method to get the main output
+
         main_last_outputs = []
         for k, v in effective_out_views.items():
             main_last_outputs.append(v[-1])  # torch.Size([1, 2048, 1, 1, 1])
-        main_last_output = self.main_last_output_marc_linear(
-            torch.sum(torch.cat(main_last_outputs, dim=0), dim=0, keepdim=True)
+
+        # ADD
+        main_last_output = torch.sum(
+            torch.cat(main_last_outputs, dim=0), dim=0, keepdim=True
         )
+        main_last_output = self.addhead(main_last_output)
+        # ADD
+
+        # MARC
+        # main_last_output = self.main_last_output_marc_linear(
+        #     torch.sum(torch.cat(main_last_outputs, dim=0), dim=0, keepdim=True)
+        # )
+        # MARC
 
         # # side output
         # cor_output = self.coronal_marc_linear(cor_middel_list[-1])
@@ -3050,7 +3105,7 @@ if __name__ == "__main__":
     )
     logger.add("/home/wjx/data/code/HeartValve/Src/PVFNet.log")
     logger.info(net)
-    output, all_save_logit = net(effective_views, view)
+    output, all_save_logit = net(effective_views, view, device="cuda")
     logger.info(output)
     # flops, params = profile(net, inputs=((effective_views = effective_views,view = view),))
     # print("FLOPs = " + str(flops / 1000**3) + "G")
