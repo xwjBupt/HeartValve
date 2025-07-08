@@ -2693,13 +2693,13 @@ class PVFNet(nn.Module):
     def __init__(
         self,
         input_channel: int = 3,
-        input_clip_length: int = 16,
-        input_crop_size: int = 512,
+        input_clip_length: int = 16,  # X3D-XS: 4; X3D-S: 13; X3D-M: 16; X3D-L: 16.
+        input_crop_size: int = 512,  # X3D-XS: 160; X3D-S: 160; X3D-M: 224; X3D-L: 312.
         # Model configs.
         model_num_class: int = 5,
         dropout_rate: float = 0.5,
         width_factor: float = 2.0,
-        depth_factor: float = 2.2,
+        depth_factor: float = 2.2,  # X3D-XS: 2.2; X3D-S: 2.2; X3D-M: 2.2; X3D-L: 5.0.
         stage_depths: List[int] = [1, 2, 5, 3],
         # Normalization configs.
         norm: Callable = nn.BatchNorm3d,
@@ -2730,7 +2730,7 @@ class PVFNet(nn.Module):
         head_bn_lin5_on: bool = False,
         head_activation: Callable = None,
         head_output_with_global_average: bool = False,
-        backbone_pretrained='/home/wjx/data/code/HeartValve/Src/X3D_M-Kinect.pyth',
+        backbone_pretrained="/home/wjx/data/code/HeartValve/Src/X3D_M-Kinect.pyth",
         use_marc=True,
         with_stem: bool = True,
         with_fusion: list = [None, None, None, None],
@@ -2757,10 +2757,12 @@ class PVFNet(nn.Module):
             self.visual_bottom_w,
         )
         if self.use_marc:
-            if model_num_class<=2:
+            if model_num_class <= 2:
                 self.main_last_output_marc_linear = MARCLinear(out_features=1)
             else:
-                self.main_last_output_marc_linear = MARCLinear(out_features=model_num_class)
+                self.main_last_output_marc_linear = MARCLinear(
+                    out_features=model_num_class
+                )
         self.gray_long_model = create_x3d(
             input_channel,
             input_clip_length,
@@ -2820,15 +2822,16 @@ class PVFNet(nn.Module):
                 else:
                     gray_long_unloaded_keys.append(k)
             self.gray_long_model.load_state_dict(gray_long_new_state_dict, strict=False)
-            cprint("gray_long_model_unloaded_keys {}".format(gray_long_unloaded_keys), color="yellow")
+            cprint(
+                "gray_long_model_unloaded_keys {}".format(gray_long_unloaded_keys),
+                color="yellow",
+            )
         else:
             cprint("No backbone pretrained weights loaded", color="yellow")
 
         self.gray_short_model = copy.deepcopy(self.gray_long_model)
         self.color_long_model = copy.deepcopy(self.gray_long_model)
         self.color_short_model = copy.deepcopy(self.gray_long_model)
-
-
 
         # if self.use_fusion == "CVFM":
         #     self.fusion_model = CVFM(
@@ -2944,24 +2947,34 @@ class PVFNet(nn.Module):
         #     else None
         # )
 
-    def forward(self, effective_views:dict, view: dict, device, **kwargs):
+    def forward(self, effective_views: dict, view: dict, device, **kwargs):
         effective_out_views = {}
-        for k,v in effective_views.items():
-            if k == 'gray_long_view' and v.item() is True:
-              effective_out_views['gray_long_view'] = self.gray_long_model(view['gray_long_view'].to(device, non_blocking=True))
-            elif k == 'gray_short_view' and v.item() is True:
-              effective_out_views['gray_short_view'] = self.gray_short_model(view['gray_short_view'].to(device, non_blocking=True))
-            elif k == 'color_long_view' and v.item() is True:
-              effective_out_views['color_long_view']  = self.color_long_model(view['color_long_view'].to(device, non_blocking=True))
-            elif k == 'color_short_view' and v.item() is True:
-              effective_out_views['color_short_view'] = self.color_short_model(view['color_short_view'].to(device, non_blocking=True))
+        for k, v in effective_views.items():
+            if k == "gray_long_view" and v.item() is True:
+                effective_out_views["gray_long_view"] = self.gray_long_model(
+                    view["gray_long_view"].to(device, non_blocking=True)
+                )
+            elif k == "gray_short_view" and v.item() is True:
+                effective_out_views["gray_short_view"] = self.gray_short_model(
+                    view["gray_short_view"].to(device, non_blocking=True)
+                )
+            elif k == "color_long_view" and v.item() is True:
+                effective_out_views["color_long_view"] = self.color_long_model(
+                    view["color_long_view"].to(device, non_blocking=True)
+                )
+            elif k == "color_short_view" and v.item() is True:
+                effective_out_views["color_short_view"] = self.color_short_model(
+                    view["color_short_view"].to(device, non_blocking=True)
+                )
 
         # main output TODO add different fuse method to get the main output
         main_last_outputs = []
-        for k,v in effective_out_views.items():
-            main_last_outputs.append(v[-1]) #torch.Size([1, 2048, 1, 1, 1])
-        main_last_output = self.main_last_output_marc_linear(torch.sum(torch.cat(main_last_outputs,dim = 0),dim=0, keepdim = True))
-            
+        for k, v in effective_out_views.items():
+            main_last_outputs.append(v[-1])  # torch.Size([1, 2048, 1, 1, 1])
+        main_last_output = self.main_last_output_marc_linear(
+            torch.sum(torch.cat(main_last_outputs, dim=0), dim=0, keepdim=True)
+        )
+
         # # side output
         # cor_output = self.coronal_marc_linear(cor_middel_list[-1])
         # sag_output = self.sagittal_marc_linear(sag_middel_list[-1])
@@ -3012,14 +3025,21 @@ class PVFNet(nn.Module):
 
 if __name__ == "__main__":
     depth = 8
-    visual = [320,256]
+    visual = [320, 256]
     v = torch.autograd.Variable(torch.rand(2, 3, depth, visual[0], visual[1]))
-    view = dict(gray_long_view = v, gray_short_view = v,color_long_view = v,color_short_view = v)
-    effective_views = dict(gray_long_view = True, gray_short_view = False,color_long_view = True,color_short_view = True)
+    view = dict(
+        gray_long_view=v, gray_short_view=v, color_long_view=v, color_short_view=v
+    )
+    effective_views = dict(
+        gray_long_view=True,
+        gray_short_view=False,
+        color_long_view=True,
+        color_short_view=True,
+    )
     net = PVFNet(
         input_clip_length=depth,
         input_crop_size=visual,
-        backbone_pretrained='/home/wjx/data/code/HeartValve/Src/X3D_M-Kinect.pyth',  # "/ai/mnt/code/DSFNet_MTICI/Src/X3D_M-Kinect.pyth",  # "/ai/mnt/code/DSFNet_MTICI/output_runs/mTICI_Single_LMDB/X3D/SINGLE_VIEW-COR-Fold1/03_30-22_32#oversample_weighted-fixnormvalue-crop-lmdb-visual32-use_marc-NLrs/Model/Best_Acc_Epoch_0080.pth",
+        backbone_pretrained="/home/wjx/data/code/HeartValve/Src/X3D_M-Kinect.pyth",  # "/ai/mnt/code/DSFNet_MTICI/Src/X3D_M-Kinect.pyth",  # "/ai/mnt/code/DSFNet_MTICI/output_runs/mTICI_Single_LMDB/X3D/SINGLE_VIEW-COR-Fold1/03_30-22_32#oversample_weighted-fixnormvalue-crop-lmdb-visual32-use_marc-NLrs/Model/Best_Acc_Epoch_0080.pth",
         use_fusion="CVFM",
         model_num_class=2,
         deep_super=[True, True, True, True],
@@ -3030,7 +3050,7 @@ if __name__ == "__main__":
     )
     logger.add("/home/wjx/data/code/HeartValve/Src/PVFNet.log")
     logger.info(net)
-    output, all_save_logit = net(effective_views,view)
+    output, all_save_logit = net(effective_views, view)
     logger.info(output)
     # flops, params = profile(net, inputs=((effective_views = effective_views,view = view),))
     # print("FLOPs = " + str(flops / 1000**3) + "G")

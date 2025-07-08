@@ -309,6 +309,28 @@ class FocalLoss(nn.Module):
             return loss_cls
 
 
+class BCELogitLoss(nn.Module):
+    def __init__(self, posweight=[1], use_dict=True):
+        super(BCELogitLoss, self).__init__()
+        self.posweight = posweight
+        self.loss_function = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor(self.posweight)
+        )
+        self.use_dict = use_dict
+
+    def forward(self, input, target):
+
+        try:
+            target = target.view_as(input).float()
+            loss_cls = self.loss_function(input, target)
+        except Exception as e:
+            print(input.shape, target.shape)
+        if self.use_dict:
+            return loss_cls, dict(loss=loss_cls.item())
+        else:
+            return loss_cls
+
+
 class OHEM_CE(nn.Module):
     """Multi-class OHEM loss implementation"""
 
@@ -525,7 +547,7 @@ class DistanceLoss(nn.Module):
 class LabelSmoothingCrossEntropy(nn.Module):
     """NLL loss with label smoothing."""
 
-    def __init__(self, smoothing=0.1, use_dict=True,**kwargs):
+    def __init__(self, smoothing=0.1, use_dict=True, **kwargs):
         super(LabelSmoothingCrossEntropy, self).__init__()
         assert smoothing < 1.0
         self.smoothing = smoothing
@@ -545,12 +567,12 @@ class LabelSmoothingCrossEntropy(nn.Module):
 
 
 class BCEFocalLoss(torch.nn.Module):
-    def __init__(self, gamma=2, alpha=0.25, reduction="mean",use_dict=True,**kwargs):
+    def __init__(self, gamma=2, alpha=0.25, reduction="mean", use_dict=True, **kwargs):
         super(BCEFocalLoss, self).__init__()
         self.gamma = gamma
         self.alpha = alpha
         self.reduction = reduction
-        self.use_dict=use_dict
+        self.use_dict = use_dict
 
     def forward(self, predict, target):
         pt = torch.sigmoid(predict)  # sigmoide获取概率
@@ -567,7 +589,6 @@ class BCEFocalLoss(torch.nn.Module):
             return loss, dict(loss=loss.item())
         else:
             return loss
-
 
 
 class OVALoss(nn.Module):

@@ -22,7 +22,8 @@ from Loss.Loss import (
     LabelSmoothSeasaw_MISO,
     FocalLabelSmoothSeasaw_MISO,
     LabelSmoothSeasawQualitative_MISO,
-    BCEFocalLoss
+    BCEFocalLoss,
+    BCELogitLoss,
 )
 
 __all__ = [
@@ -48,6 +49,7 @@ __all__ = [
     "SeesawLoss",
     "LabelSmoothSeasaw_MISO",
     "FocalLabelSmoothSeasaw_MISO",
-    'BCEFocalLoss',
-    'LabelSmoothSeasawQualitative_MISO'
+    "BCEFocalLoss",
+    "LabelSmoothSeasawQualitative_MISO",
+    "BCELogitLoss",
 ]

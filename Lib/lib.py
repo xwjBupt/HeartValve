@@ -24,6 +24,7 @@ from multiprocessing import Pool
 from typing import Callable, List, Optional, Tuple
 from functools import partial
 
+
 class SmoothedValue(object):
     """Track a series of values and provide access to smoothed values over a
     window or the global series average.
@@ -295,6 +296,7 @@ def save_checkpoint(
     best_acc_flag=False,
     best_recall_flag=False,
     best_f1_flag=False,
+    best_auc_flag=False,
     cover_up=True,
 ):
     if best_acc_flag:
@@ -324,6 +326,13 @@ def save_checkpoint(
             for exists_model in exists_models:
                 os.remove(exists_model)
         save_name = save_model + "/Best_F1_Epoch_%04d.pth" % (epoch)
+        torch.save(save_dict, save_name)
+    elif best_auc_flag:
+        if cover_up:
+            exists_models = glob.glob(save_model + "/Best_AUC_Epoch*.pth")
+            for exists_model in exists_models:
+                os.remove(exists_model)
+        save_name = save_model + "/Best_AUC_Epoch_%04d.pth" % (epoch)
         torch.save(save_dict, save_name)
     else:
         save_name = save_model + "/checkpoint.pth"

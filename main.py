@@ -123,7 +123,6 @@ def main(cfg):
         device = "cpu"
         logger.info("There is no GPUs, using CPU")
     else:
-        # os.environ["CUDA_VISIBLE_DEVICES"] = str(cfg.BASIC.Num_gpus)
         logger.info("There is %d GPUs, using GPU" % num_gpus)
         device = "cuda"
 
@@ -133,6 +132,9 @@ def main(cfg):
     net = build_model(cfg.MODEL)
     optimizer = build_opt(cfg.OPT, net)
     scheduler = build_scheduler(cfg.SCHEDULER, optimizer)
+
+    num_parameters = sum(p.numel() for p in net.parameters() if p.requires_grad)
+    logger.info("num_parameters of the using net is {}".format(num_parameters))
 
     if cfg.BASIC.Finetune or cfg.BASIC.Resume:
         if cfg.BASIC.Resume:
@@ -187,13 +189,17 @@ def main(cfg):
         best_mean_recall_epoch = -1
         best_mean_f1 = -1.0
         best_mean_f1_epoch = -1
+        best_mean_auc = -1.0
+        best_mean_auc_epoch = -1
         final_stop = cfg.BASIC.Epochs
-    logger.info(loss)
-    # experiment setup
+
+    logger.info("using loss {}".format(loss))
+
     if num_gpus > 1:
         net = torch.nn.DataParallel(net)
         logger.info("Using DataParallel with %d GPUS<<<" % num_gpus)
     net.to(device)
+    loss.to(device)
     logger.info(net)
     logger.info(">>> START TRAINING <<<")
     wandb.watch(net, loss, log="all", log_freq=5)
@@ -384,6 +390,35 @@ def main(cfg):
 
                 saved = True
 
+            if current_auc > best_mean_auc:
+                best_mean_auc_epoch = epoch
+                best_mean_auc = current_auc
+                logger.info(
+                    "Mean_auc Metric update to >>> Mean_auc: %.6f @ epoch: %d"
+                    % (best_mean_auc, best_mean_auc_epoch)
+                )
+                if not saved:
+                    save_dict = {
+                        "epoch": epoch,
+                        "best_loss": current_loss,
+                        "best_acc": current_acc,
+                        "best_recall": current_recall,
+                        "best_f1": current_f1,
+                        "best_auc": best_mean_auc,
+                        "net_dict": net_dict,
+                        "optimizer_dict": optimizer.state_dict(),
+                        "lr": rightnow_lr,
+                        "cfg": cfg,
+                    }
+                    save_checkpoint(
+                        save_model,
+                        epoch,
+                        save_dict=save_dict,
+                        best_auc_flag=True,
+                    )
+
+                saved = True
+
             if current_acc > best_mean_acc:
                 best_mean_acc_epoch = epoch
                 best_mean_acc = current_acc
@@ -471,6 +506,7 @@ def main(cfg):
                     "best_acc": best_mean_acc,
                     "best_recall": best_mean_recall,
                     "best_f1": best_mean_f1,
+                    "best_auc": best_mean_auc,
                     "net_dict": net_dict,
                     "optimizer_dict": optimizer.state_dict(),
                     "lr": rightnow_lr,
@@ -485,7 +521,7 @@ def main(cfg):
             epoch_stop = time.time()
             epoch_time = epoch_stop - epoch_start
             logger.info(
-                ">>> [ %s ][ epoch: %d / %d time: %.3f] [ Current Best: Loss: %.6f @ epoch: %d - Mean_ACC: %.5f @ epoch: %d Mean_Recall: %.5f @ epoch: %d Mean_F1: %.5f @ epoch: %d ] <<< \n"
+                ">>> [ %s ][ epoch: %d / %d time: %.3f] [ Current Best: Loss: %.6f @ epoch: %d - Mean_ACC: %.5f @ epoch: %d Mean_Recall: %.5f @ epoch: %d Mean_F1: %.5f @ epoch: %d Mean_Auc: %.5f @ epoch: %d] <<< \n"
                 % (
                     expriment,
                     epoch,
@@ -499,6 +535,8 @@ def main(cfg):
                     best_mean_recall_epoch,
                     best_mean_f1,
                     best_mean_f1_epoch,
+                    best_mean_auc,
+                    best_mean_auc_epoch,
                 )
             )
             print("\n\n")
@@ -507,6 +545,7 @@ def main(cfg):
                 best_mean_acc_epoch,
                 best_mean_recall_epoch,
                 best_mean_f1_epoch,
+                best_mean_auc_epoch,
             )
 
             if epoch > cfg.BASIC.Epochs - cfg.BASIC.no_trans_epoch:
@@ -525,7 +564,7 @@ def main(cfg):
 
     logger.info(">>> Finish Training <<<")
     logger.info(
-        "[ Best: Loss: %.6f @ epoch : %d -- Mean_ACC: %.5f @ epoch: %d -- Mean_Recall: %.5f @ epoch: %d -- Mean_F1: %.5f @ epoch: %d ] \n\n"
+        "[ Best: Loss: %.6f @ epoch : %d -- Mean_ACC: %.5f @ epoch: %d -- Mean_Recall: %.5f @ epoch: %d -- Mean_F1: %.5f @ epoch: %d -- Mean_Auc: %.5f @ epoch: %d] \n\n"
         % (
             best_mean_loss,
             best_mean_loss_epoch,
@@ -535,13 +574,15 @@ def main(cfg):
             best_mean_recall_epoch,
             best_mean_f1,
             best_mean_f1_epoch,
+            best_mean_auc,
+            best_mean_auc_epoch,
         )
     )
     logger.info(">>> Start Infer <<<")
     infer_results = infer(infer_path=root, logger=logger, epochs=-1)
     logger.info(">>> Finish Infer <<<")
     run.finish()
-    return best_mean_acc
+    return best_mean_f1
 
 
 if __name__ == "__main__":
