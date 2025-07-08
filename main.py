@@ -250,7 +250,7 @@ def main(cfg):
             pos = (train_labels == 1).sum()
             neg = (train_labels == 0).sum()
             logger.debug(
-                "Trainging: Positive: {}, Negative: {}, Ratio (/): {}/{}\n raw train_logits {} \n sigmoid train_logits {}".format(
+                "Trainging: Positive: {}, Negative: {}, Ratio (/): {}\n raw train_logits {} \n sigmoid train_logits {}".format(
                     pos, neg, pos / neg, train_logits, torch.sigmoid(train_logits)
                 )
             )
@@ -311,7 +311,7 @@ def main(cfg):
             pos = (val_labels == 1).sum()
             neg = (val_labels == 0).sum()
             logger.debug(
-                "VALIDATE: Positive: {}, Negative: {}, Ratio (/): {}/{}\n raw val_logits {} \n sigmoid val_logits {}".format(
+                "VALIDATE: Positive: {}, Negative: {}, Ratio (/): {}\n raw val_logits {} \n sigmoid val_logits {}".format(
                     pos, neg, pos / neg, val_logits, torch.sigmoid(val_logits)
                 )
             )
