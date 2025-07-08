@@ -53,13 +53,6 @@ def train(
             )
     logits = torch.cat(all_logits)
     labels = torch.cat(all_labels).numpy()
-    print("VAL logits:", logits[:10])
-    print("VAL sigmoid(logits):", torch.sigmoid(logits[:10]))
-    total = len(labels)
-    pos = (labels == 1).sum()
-    neg = (labels == 0).sum()
-    print(f"Positive: {pos}, Negative: {neg}, Ratio (pos/neg): {pos/neg}")
-
     return (
         net,
         loss_logger,

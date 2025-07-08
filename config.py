@@ -103,9 +103,9 @@ _C.MODEL.Name = "PVFNet"
 _C.MODEL.Para = CN()
 _C.MODEL.Para.input_clip_length = _C.DATA.Train.DataPara.fast_time_size
 _C.MODEL.Para.input_crop_size = _C.DATA.Train.DataPara.visual_size
-_C.MODEL.Para.use_marc = True
+_C.MODEL.Para.use_marc = False
 _C.MODEL.Para.model_num_class = num_classes
-_C.MODEL.Para.use_fusion = "CVFM"
+_C.MODEL.Para.use_fusion = "StrongRegularizedBinaryHead"
 _C.MODEL.Para.mlp_dropout_rate = 0
 _C.MODEL.Para.num_heads = 8
 _C.MODEL.Para.expand_dim = 8
@@ -125,5 +125,5 @@ _C.METHOD.Desc = "T%02dH%03dW%03d/%s-%s" % (
     _C.MODEL.Para.use_fusion,
     _C.LOSS.Name,
 )
-_C.METHOD.Detail_Desc = "oversample-lmdb-fixpre-Pre_Nopretrain"
+_C.METHOD.Detail_Desc = "StrongRegularizedBinaryHead_DO0.7"
 _C.METHOD.Name = _C.MODEL.Name

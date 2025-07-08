@@ -2645,7 +2645,7 @@ class StrongRegularizedBinaryHead(nn.Module):
         self,
         in_channels=2048,
         hidden_dim=512,
-        dropout_rate=0.5,
+        dropout_rate=0.7,
         use_bn=True,
         use_l2_norm=True,
     ):

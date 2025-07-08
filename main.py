@@ -246,7 +246,13 @@ def main(cfg):
                 iter_dis,
                 wandb=wandb,
             )
-
+            pos = (train_labels == 1).sum()
+            neg = (train_labels == 0).sum()
+            logger.debug(
+                "Trainging: Positive: {}, Negative: {}, Ratio (/): {}/{}\n raw train_logits {} \n sigmoid train_logits {}".format(
+                    pos, neg, pos / neg, train_logits, torch.sigmoid(train_logits)
+                )
+            )
             train_metrics, train_cm = calculate_and_save_metrics(
                 train_labels,
                 train_logits,
@@ -300,6 +306,13 @@ def main(cfg):
                 epoch,
                 loss,
                 iter_dis=iter_dis,
+            )
+            pos = (val_labels == 1).sum()
+            neg = (val_labels == 0).sum()
+            logger.debug(
+                "VALIDATE: Positive: {}, Negative: {}, Ratio (/): {}/{}\n raw val_logits {} \n sigmoid val_logits {}".format(
+                    pos, neg, pos / neg, val_logits, torch.sigmoid(val_logits)
+                )
             )
 
             val_metrics, val_cm = calculate_and_save_metrics(
