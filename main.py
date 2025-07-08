@@ -85,8 +85,9 @@ def main(cfg):
         + " <<<"
     )
     wandb_tag = cfg.METHOD.Name + "#" + timestamp + "#" + cfg.METHOD.Desc
+    os.environ["WANDB_MODE"] = "dryrun"
     if cfg.BASIC.DEBUG:
-        os.environ["WANDB_MODE"] = "dryrun"
+
         logger.info("In debug, using wandb Offline")
         run = wandb.init(
             config=cfg,
