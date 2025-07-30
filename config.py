@@ -108,7 +108,9 @@ _C.MODEL.Para.mlp_dropout_rate = 0
 _C.MODEL.Para.num_heads = 8
 _C.MODEL.Para.expand_dim = 8
 _C.MODEL.Para.deep_super = [False, True, False, True]
-_C.MODEL.Para.backbone_pretrained = None
+_C.MODEL.Para.backbone_pretrained = (
+    "/home/wjx/data/code/HeartValve/Src/X3D_XS-Kinect.pyth"
+)
 # (
 #     "/home/wjx/data/code/HeartValve/Src/X3D_XS-Kinect.pyth"
 # )
@@ -117,7 +119,7 @@ _C.MODEL.Para.stage_depths = [1, 2, 3, 3]  # 1253
 
 
 _C.METHOD = CN()
-_C.METHOD.Detail_Desc = "NoPretrianed-BackX3D-Fold2"
+_C.METHOD.Detail_Desc = "Pretrianed-BackX3D-Fold2"
 _C.METHOD.Name = _C.MODEL.Name
 _C.METHOD.Desc = "T%02dH%03dW%03d/%s-%s" % (
     _C.DATA.Train.DataPara.time_size,
