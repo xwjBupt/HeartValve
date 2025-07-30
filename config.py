@@ -117,7 +117,7 @@ _C.MODEL.Para.stage_depths = [1, 2, 3, 3]  # 1253
 
 
 _C.METHOD = CN()
-_C.METHOD.Detail_Desc = "NoPretrianed-BackX3D-Fold1"
+_C.METHOD.Detail_Desc = "NoPretrianed-BackX3D-Fold2"
 _C.METHOD.Name = _C.MODEL.Name
 _C.METHOD.Desc = "T%02dH%03dW%03d/%s-%s" % (
     _C.DATA.Train.DataPara.time_size,
