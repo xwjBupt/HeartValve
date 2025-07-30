@@ -82,12 +82,17 @@ class VideoAugment(torch.nn.Module):
         drop_idx = sorted(random.sample(range(T), drop_count))
         keep = [i for i in range(T) if i not in drop_idx]
         video = video[keep]
-        video = F.interpolate(
-            video.unsqueeze(0),
-            size=(self.target_frames, video.size(2), video.size(3)),
-            mode="trilinear",
-            align_corners=False,
-        ).squeeze(0)
+        if video.shape[0] != self.target_frames:
+            video = (
+                F.interpolate(
+                    video.transpose(0, 1).unsqueeze(0),
+                    size=(self.target_frames, video.size(2), video.size(3)),
+                    mode="trilinear",
+                    align_corners=False,
+                )
+                .squeeze(0)
+                .transpose(0, 1)
+            )
         return video
 
     def temporal_crop(self, video):
@@ -102,6 +107,18 @@ class VideoAugment(torch.nn.Module):
         if video.size(0) < self.target_frames:
             repeat_count = self.target_frames // video.size(0) + 1
             video = video.repeat(repeat_count, 1, 1, 1)[: self.target_frames]
+
+        if video.shape[0] != self.target_frames:
+            video = (
+                F.interpolate(
+                    video.transpose(0, 1).unsqueeze(0),
+                    size=(self.target_frames, video.size(2), video.size(3)),
+                    mode="trilinear",
+                    align_corners=False,
+                )
+                .squeeze(0)
+                .transpose(0, 1)
+            )
         return video
 
     def speed_change(self, video):
@@ -109,21 +126,27 @@ class VideoAugment(torch.nn.Module):
         T = video.size(0)
         factor = random.choice([0.5, 0.75, 1.25, 1.5])  # 速度系数
         new_T = int(T * factor)
-        video = F.interpolate(
-            video.unsqueeze(0),
-            size=(new_T, video.size(2), video.size(3)),
-            mode="trilinear",
-            align_corners=False,
-        ).squeeze(0)
         if new_T > self.target_frames:
             start = random.randint(0, new_T - self.target_frames)
             video = video[start : start + self.target_frames]
         else:
             repeat_count = self.target_frames // new_T + 1
             video = video.repeat(repeat_count, 1, 1, 1)[: self.target_frames]
+        if video.shape[0] != self.target_frames:
+            video = (
+                F.interpolate(
+                    video.transpose(0, 1).unsqueeze(0),
+                    size=(self.target_frames, video.size(2), video.size(3)),
+                    mode="trilinear",
+                    align_corners=False,
+                )
+                .squeeze(0)
+                .transpose(0, 1)
+            )
         return video
 
     def forward(self, video, params=None):
+        rv = copy.deepcopy(video)
         if video.max() > 1.0:
             video = video / 255.0
 
@@ -132,12 +155,12 @@ class VideoAugment(torch.nn.Module):
             return video.clamp(0, 1)
 
         # RandAugment: 只保留 N 个 True
-        if self.rand_n and params is not None:
-            keys = list(params.keys())
-            active = random.sample(keys, min(self.rand_n, len(keys)))
-            for k in keys:
-                params[k] = k in active
-
+        # if self.rand_n and params is not None:
+        #     keys = list(params.keys())
+        #     active = random.sample(keys, min(self.rand_n, len(keys)))
+        #     for k in keys:
+        #         params[k] = k in active
+        rv = copy.deepcopy(video)
         if params["do_flip"]:
             video = self.flip_aug(video)
         if params["do_affine"]:
@@ -151,7 +174,7 @@ class VideoAugment(torch.nn.Module):
         if params["do_erase"]:
             video = self.erase_aug(video)
 
-        video = self.resize_aug(video).squeeze(0)
+        video = self.resize_aug(video)
 
         if params["do_temporal_crop"]:
             video = self.temporal_crop(video)
@@ -174,6 +197,9 @@ class VideoAugment(torch.nn.Module):
             v_np = np.stack(frames)
             video = torch.from_numpy(v_np).permute(0, 3, 1, 2).float()
 
+        T, C, H, W = video.shape
+        if T != 8 or C != 3:
+            print(video.shape)
         return video.clamp(0, 1)
 
 
@@ -237,9 +263,8 @@ class HartValve(data.Dataset):
         return len(self.patientid)
 
     def __getitem__(self, index):
-        if index % self.batch_size == 0:
-            self.batch_params = self.__sample_batch_params()
 
+        self.batch_params = self.__sample_batch_params()
         self.patient_name = self.patientid[index]
         self.label = self.__map_label(self.patient_name)
         self.video_names = self.patientid_videos[self.patient_name]
@@ -372,16 +397,14 @@ class HartValve(data.Dataset):
 
 
 if __name__ == "__main__":
-    hv = HartValve(state="test", batch_size=4)
+    hv = HartValve(state="train", batch_size=4)
     logger.info(hv.get_weighted_count())
     start = time.time()
     for index, datas in tqdm.tqdm(enumerate(hv)):
-        print(datas)
-    # labels_list = [0 for i in range(2)]
-    # for index, datas in tqdm.tqdm(enumerate(hv)):
-    #     labels_list[datas["label"].item()] += 1
-    #     if index%10==0:
-    #         logger.info(f"{datas['patient_name']},{datas['video_names']},{datas['effective_views']},{datas['effective_views_tensors']['gray_long_view'].shape},{datas['effective_views_tensors']['gray_short_view'].shape},{datas['effective_views_tensors']['color_long_view'].shape},{datas['effective_views_tensors']['color_short_view'].shape}")
-    # fps = len(hv) / (time.time() - start)
-    # logger.info (fps)
-    # logger.info (labels_list)
+        effective_views_tensors = datas["effective_views_tensors"]
+        print(
+            effective_views_tensors["gray_long_view"].shape,
+            effective_views_tensors["gray_short_view"].shape,
+            effective_views_tensors["color_long_view"].shape,
+            effective_views_tensors["color_short_view"].shape,
+        )

@@ -37,9 +37,8 @@ _C.DATA.Train.DataPara.state = "train"
 _C.DATA.Train.DataPara.json_file_dir = (
     "/home/wjx/data/dataset/Heart/cropped_processed_DrLiu_250619_fold3.json"
 )
-_C.DATA.Train.DataPara.fast_time_size = 8
+_C.DATA.Train.DataPara.time_size = 8
 _C.DATA.Train.DataPara.fold = "0"
-_C.DATA.Train.DataPara.crop = (0.1, 0.1, 0.2, 0.1)
 _C.DATA.Train.DataPara.visual_size = (320, 256)
 _C.DATA.Train.LoaderPara = CN()
 _C.DATA.Train.LoaderPara.batch_size = 1
@@ -51,8 +50,7 @@ _C.DATA.Val.DataPara = CN()
 _C.DATA.Val.DataPara.name = _C.DATA.Train.DataPara.name
 _C.DATA.Val.DataPara.fold = _C.DATA.Train.DataPara.fold
 _C.DATA.Val.DataPara.state = "test"
-_C.DATA.Val.DataPara.fast_time_size = _C.DATA.Train.DataPara.fast_time_size
-_C.DATA.Val.DataPara.crop = -1
+_C.DATA.Val.DataPara.time_size = _C.DATA.Train.DataPara.time_size
 _C.DATA.Val.DataPara.visual_size = _C.DATA.Train.DataPara.visual_size
 _C.DATA.Val.LoaderPara = CN()
 _C.DATA.Val.LoaderPara.batch_size = 1
@@ -101,7 +99,7 @@ _C.LOSS.Para = CN()
 _C.MODEL = CN()
 _C.MODEL.Name = "PVFNet"
 _C.MODEL.Para = CN()
-_C.MODEL.Para.input_clip_length = _C.DATA.Train.DataPara.fast_time_size
+_C.MODEL.Para.input_clip_length = _C.DATA.Train.DataPara.time_size
 _C.MODEL.Para.input_crop_size = _C.DATA.Train.DataPara.visual_size
 _C.MODEL.Para.use_marc = False
 _C.MODEL.Para.model_num_class = num_classes
@@ -119,7 +117,7 @@ _C.MODEL.Para.stage_depths = [1, 2, 3, 3]  # 1253
 
 _C.METHOD = CN()
 _C.METHOD.Desc = "T%02dH%03dW%03d/%s-%s" % (
-    _C.DATA.Train.DataPara.fast_time_size,
+    _C.DATA.Train.DataPara.time_size,
     _C.DATA.Train.DataPara.visual_size[0],
     _C.DATA.Train.DataPara.visual_size[1],
     _C.MODEL.Para.use_fusion,
