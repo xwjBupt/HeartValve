@@ -12,3 +12,5 @@ Lib/__pycache__/lib.cpython-312.pyc
 __pycache__/*
 *wandb*
 *.csv
+*.mp4
+*.pth

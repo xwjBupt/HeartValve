@@ -23,6 +23,11 @@ import csv
 from multiprocessing import Pool
 from typing import Callable, List, Optional, Tuple
 from functools import partial
+import torch
+import cv2
+
+# import mmcv
+import numpy as np
 
 
 class SmoothedValue(object):
@@ -419,3 +424,90 @@ def _wrapper(enum_iterable, function, **kwargs):
     i = enum_iterable[0]
     result = function(enum_iterable[1], **kwargs)
     return i, result
+
+
+# def save_tensor_video_mmcv(video_tensor: torch.Tensor, output_path: str, fps: int = 5):
+#     """
+#     使用 mmcv 将视频 tensor 写入本地文件，自动判断取值范围 ([0, 1] or [0, 255])。
+
+#     参数:
+#         video_tensor (Tensor): 视频数据，形状为 (T, C, H, W)，C 必须为 3
+#         output_path (str): 输出视频路径（如 'video.mp4'）
+#         fps (int): 帧率，默认 25
+#     """
+#     assert isinstance(video_tensor, torch.Tensor), "输入必须是 torch.Tensor"
+#     assert video_tensor.ndim == 4, "视频 Tensor 应为 (T, C, H, W)"
+#     assert video_tensor.shape[1] == 3, "当前仅支持 RGB 三通道视频"
+
+#     video_tensor = video_tensor.detach().cpu()
+
+#     # 判断是否为 [0, 1] 还是 [0, 255]
+#     max_val = video_tensor.max().item()
+#     if max_val <= 1.0:
+#         video_tensor = video_tensor * 255.0
+#         print("🔍 检测到取值范围为 [0, 1]，已转换为 [0, 255]")
+#     else:
+#         print("🔍 检测到取值范围为 [0, 255]，无需转换")
+
+#     # 转换为 uint8，形状 (T, H, W, C)
+#     video_tensor = video_tensor.clamp(0, 255).byte()
+#     video_numpy = video_tensor.permute(0, 2, 3, 1).numpy()
+
+#     # 获取分辨率
+#     h, w = video_numpy.shape[1:3]
+
+#     # 初始化写入器
+#     writer = mmcv.VideoWriter(output_path, fps=fps, frame_size=(w, h))
+
+#     for frame in video_numpy:
+#         writer.write_frame(frame)
+
+#     writer.release()
+#     print(f"✅ 视频已保存至: {output_path}")
+
+
+def save_tensor_video_cv2(tensor, save_path, fps=5):
+    """
+    将视频 Tensor 保存为 MP4 文件，自动适配 0-1 或 0-255 的范围。
+
+    参数:
+    - tensor: torch.Tensor 或 numpy.ndarray, 形状 [T, C, H, W] 或 [T, H, W, C]
+    - save_path: 输出视频文件路径
+    - fps: 帧率
+    """
+    # 转成 numpy
+    if isinstance(tensor, torch.Tensor):
+        tensor = tensor.detach().cpu().numpy()
+
+    # 确保维度是 [T, H, W, C]
+    if tensor.shape[1] in [1, 3]:  # [T, C, H, W]
+        tensor = np.transpose(tensor, (0, 2, 3, 1))  # 转成 [T, H, W, C]
+
+    T, H, W, C = tensor.shape
+
+    # 自动检测范围
+    min_val, max_val = tensor.min(), tensor.max()
+    if max_val <= 1.0:
+        tensor = (tensor * 255.0).clip(0, 255)
+    else:
+        tensor = tensor.clip(0, 255)
+
+    # 转成 uint8
+    tensor = tensor.astype(np.uint8)
+
+    # 如果是单通道灰度，转成三通道
+    if C == 1:
+        tensor = np.repeat(tensor, 3, axis=-1)
+
+    # 确保保存目录存在
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+    # 使用 OpenCV 保存 MP4 视频
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(save_path, fourcc, fps, (W, H))
+
+    for frame in tensor:
+        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        out.write(frame_bgr)
+    out.release()
+    print(f"✅ 视频已保存到: {save_path}")
