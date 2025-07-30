@@ -32,8 +32,6 @@ import kornia.augmentation as K
 import albumentations as A
 
 
-
-
 class VideoAugment(torch.nn.Module):
     def __init__(
         self,
@@ -235,31 +233,6 @@ class HartValve(data.Dataset):
         )
         self.batch_params = None
 
-        # self.train_trans = TRANS.Compose(
-        #     [
-        #         TRANS.RandomErode(k=3, high=192, low=16, p=0.15),
-        #         TRANS.RandomDilate(k=3, high=192, low=16, p=0.15),
-        #         TRANS.TioClamp(clamps=(16, 192), p=0),
-        #         TRANS.TioRandomFlip(p=0.25),
-        #         TRANS.TioRandomAnisotropy(p=0.25),
-        #         TRANS.TioRandomMotion(p=0.25),
-        #         TRANS.TioRandomGhosting(p=0.25),
-        #         TRANS.TioRandomSpike(p=0.25),
-        #         TRANS.TioRandomBiasField(p=0.25),
-        #         TRANS.TioRandomBlur(p=0.25),
-        #         TRANS.TioRandomNoise(p=0.25),
-        #         TRANS.TioRandomGamma(p=0.25),
-        #         TRANS.RandomRotation(degrees=(-30, 30), fill=0, p=0.25),
-        #         TRANS.Crop(crop=(0.2, 0.2, 0.2, 0.2)),
-        #         TRANS.Resize(
-        #             t=self.time_size,
-        #             visual=(self.visual_size[0], self.visual_size[1]),
-        #         ),
-        #         TRANS.TioZNormalization(p=1, div255=True),
-        #     ]
-        # )
-        # self.val_trans = TRANS.TioZNormalization(p=1, div255=True)
-
     def __len__(self):
         return len(self.patientid)
 
@@ -302,7 +275,7 @@ class HartValve(data.Dataset):
             video_names=self.video_names,
         )
 
-    def __get_weighted_count(self):
+    def get_weighted_count(self):
         labels_list = [0 for i in range(self.num_classes)]
         for sample in self.patientid:
             labels_list[self.__map_label(sample).item()] += 1
@@ -400,7 +373,7 @@ class HartValve(data.Dataset):
 
 if __name__ == "__main__":
     hv = HartValve(state="test", batch_size=4)
-    # logger.info(hv.__get_weighted_count())
+    logger.info(hv.get_weighted_count())
     start = time.time()
     for index, datas in tqdm.tqdm(enumerate(hv)):
         print(datas)
