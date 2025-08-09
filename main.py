@@ -350,7 +350,7 @@ def main(cfg):
             plt.ylabel("Count")
             plt.grid(True)
             plt.savefig(
-                save_val_process + "val_sigmoid_output_logit_Epoch%04d.png" % (epoch)
+                save_val_process + "/val_sigmoid_output_logit_Epoch%04d.png" % (epoch)
             )
             plt.close()
             ### VAL STOP ###
