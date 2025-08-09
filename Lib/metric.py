@@ -703,7 +703,7 @@ def save_confusion_matrix(
     ax.set_ylabel("True")
     ax.set_title(f"Confusion Matrix (Epoch {epoch})")
 
-    plt.savefig(f"{log_dir}/{phase}_cm_epoch{epoch}.png")
+    plt.savefig("{}/{}_cm_epoch{:04d}.png".format(log_dir, phase, epoch))
     plt.close()
     return cm
 
@@ -810,9 +810,9 @@ def save_roc_curve(
     plt.legend(loc="lower right")
     plt.grid(True)
     if task_type == "binary":
-        plt.savefig(f"{log_dir}/{phase}_roc_epoch{epoch}.png")
+        plt.savefig("{}/{}_roc_epoch{:04d}.png".format(log_dir, phase, epoch))
     else:
-        plt.savefig(f"{log_dir}/{phase}_roc_class{class_id}_epoch{epoch}.png")
+        plt.savefig("{}/{}_roc_class{:04d}.png".format(log_dir, phase, epoch))
     plt.close()
 
 
@@ -838,7 +838,7 @@ def save_pr_curve(
     plt.legend(loc="lower left")
     plt.grid(True)
     if task_type == "binary":
-        plt.savefig(f"{log_dir}/{phase}_pr_epoch{epoch}.png")
+        plt.savefig("{}/{}_pr_epoch{:04d}.png".format(log_dir, phase, epoch))
     else:
-        plt.savefig(f"{log_dir}/{phase}_pr_class{class_id}_epoch{epoch}.png")
+        plt.savefig("{}/{}_pr_class{:04d}.png".format(log_dir, phase, epoch))
     plt.close()

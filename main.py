@@ -52,7 +52,7 @@ def get_arguments(args):
     if not args.nodebug:
         cfg.METHOD.Name = "DEBUG"
         cfg.BASIC.DEBUG = True
-    if cfg.BASIC.Seed == 1:
+    if cfg.BASIC.Seed < 0:
         cfg.BASIC.Seed = random.randint(2, 25530)
     cfg.freeze()
     return cfg
@@ -251,11 +251,11 @@ def main(cfg):
             )
             pos = (train_labels == 1).sum()
             neg = (train_labels == 0).sum()
-            logger.debug(
-                "Trainging: Positive: {}, Negative: {}, Ratio (/): {}\n raw train_logits {} \n sigmoid train_logits {}".format(
-                    pos, neg, pos / neg, train_logits, torch.sigmoid(train_logits)
-                )
-            )
+            # logger.debug(
+            #     "Trainging: Positive: {}, Negative: {}, Ratio (/): {}\n raw train_logits {} \n sigmoid train_logits {}".format(
+            #         pos, neg, pos / neg, train_logits, torch.sigmoid(train_logits)
+            #     )
+            # )
             train_metrics, train_cm = calculate_and_save_metrics(
                 train_labels,
                 train_logits,
@@ -313,11 +313,11 @@ def main(cfg):
             )
             pos = (val_labels == 1).sum()
             neg = (val_labels == 0).sum()
-            logger.debug(
-                "VALIDATE: Positive: {}, Negative: {}, Ratio (/): {}\n raw val_logits {} \n sigmoid val_logits {}".format(
-                    pos, neg, pos / neg, val_logits, torch.sigmoid(val_logits)
-                )
-            )
+            # logger.debug(
+            #     "VALIDATE: Positive: {}, Negative: {}, Ratio (/): {}\n raw val_logits {} \n sigmoid val_logits {}".format(
+            #         pos, neg, pos / neg, val_logits, torch.sigmoid(val_logits)
+            #     )
+            # )
 
             val_metrics, val_cm = calculate_and_save_metrics(
                 val_labels,
