@@ -78,7 +78,6 @@ def val(
     tbar = tqdm(dataloader, dynamic_ncols=True)
     all_logits, all_labels = [], []
     net.eval()
-    name_pred_dict = {}
     for index, data in enumerate(tbar):
         label = data["label"].to(device, non_blocking=True)
         effective_views = data["effective_views"]

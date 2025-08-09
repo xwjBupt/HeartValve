@@ -72,9 +72,11 @@ def main(cfg):
     root = rootinroot + "/output_runs/" + expriment + "/"
     setproctitle.setproctitle(cfg.METHOD.Desc)
     save_model = root + "/" + "Model"
+    save_train_process = root + "/" + "train_process"
+    save_val_process = root + "/" + "val_process"
     logger.add(root + "/" + "output.log")
     write_yaml(root + "/" + "config.yaml", nodeTodict(cfg))
-    dir_needs = [save_model]
+    dir_needs = [save_model, save_train_process, save_val_process]
     commit_info = (
         "COMMIT INFO >>> "
         + cfg.METHOD.Name
@@ -258,7 +260,7 @@ def main(cfg):
                 train_labels,
                 train_logits,
                 epoch,
-                log_dir=save_model,
+                log_dir=save_train_process,
                 phase="train",
                 num_classes=num_classes,
                 threshold=0.5,
@@ -286,7 +288,8 @@ def main(cfg):
             plt.ylabel("Count")
             plt.grid(True)
             plt.savefig(
-                save_model + "/train_sigmoid_output_logit_Epoch%04d.png" % (epoch)
+                save_train_process
+                + "/train_sigmoid_output_logit_Epoch%04d.png" % (epoch)
             )
             plt.close()
 
@@ -320,7 +323,7 @@ def main(cfg):
                 val_labels,
                 val_logits,
                 epoch,
-                log_dir=save_model,
+                log_dir=save_val_process,
                 phase="val",
                 num_classes=num_classes,
                 threshold=0.5,
@@ -347,7 +350,7 @@ def main(cfg):
             plt.ylabel("Count")
             plt.grid(True)
             plt.savefig(
-                save_model + "/val_sigmoid_output_logit_Epoch%04d.png" % (epoch)
+                save_val_process + "val_sigmoid_output_logit_Epoch%04d.png" % (epoch)
             )
             plt.close()
             ### VAL STOP ###

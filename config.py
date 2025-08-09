@@ -26,6 +26,7 @@ _C.BASIC.Seed = 14207
 _C.BASIC.Use_wandb = True
 _C.BASIC.Warmup_epoch = 20
 _C.BASIC.no_trans_epoch = 15
+_C.BASIC.Num_classes = num_classes
 
 
 _C.DATA = CN()
@@ -49,7 +50,7 @@ _C.DATA.Val.Class = _C.DATA.Train.Class
 _C.DATA.Val.DataPara = CN()
 _C.DATA.Val.DataPara.name = _C.DATA.Train.DataPara.name
 _C.DATA.Val.DataPara.fold = _C.DATA.Train.DataPara.fold
-_C.DATA.Val.DataPara.state = "test"
+_C.DATA.Val.DataPara.state = "val"
 _C.DATA.Val.DataPara.time_size = _C.DATA.Train.DataPara.time_size
 _C.DATA.Val.DataPara.visual_size = _C.DATA.Train.DataPara.visual_size
 _C.DATA.Val.LoaderPara = CN()
@@ -108,9 +109,7 @@ _C.MODEL.Para.mlp_dropout_rate = 0
 _C.MODEL.Para.num_heads = 8
 _C.MODEL.Para.expand_dim = 8
 _C.MODEL.Para.deep_super = [False, True, False, True]
-_C.MODEL.Para.backbone_pretrained = (
-    "/home/wjx/data/code/HeartValve/Src/X3D_XS-Kinect.pyth"
-)
+_C.MODEL.Para.backbone_pretrained = None
 # (
 #     "/home/wjx/data/code/HeartValve/Src/X3D_XS-Kinect.pyth"
 # )
@@ -119,7 +118,7 @@ _C.MODEL.Para.stage_depths = [1, 2, 3, 3]  # 1253
 
 
 _C.METHOD = CN()
-_C.METHOD.Detail_Desc = "Pretrianed-BackX3D-Fold%s" % _C.DATA.Train.DataPara.fold
+_C.METHOD.Detail_Desc = "NoPretrianed-BackX3D-Fold%s" % _C.DATA.Train.DataPara.fold
 _C.METHOD.Name = _C.MODEL.Name
 _C.METHOD.Desc = "T%02dH%03dW%03d/%s-%s" % (
     _C.DATA.Train.DataPara.time_size,
