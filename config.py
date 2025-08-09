@@ -22,7 +22,7 @@ _C.BASIC.Finetune = False
 _C.BASIC.Lr_decay = 15
 _C.BASIC.Num_gpus = "2"
 _C.BASIC.Resume = False
-_C.BASIC.Seed = 14207
+_C.BASIC.Seed = 3490
 _C.BASIC.Use_wandb = True
 _C.BASIC.Warmup_epoch = 20
 _C.BASIC.no_trans_epoch = 15
@@ -109,16 +109,17 @@ _C.MODEL.Para.mlp_dropout_rate = 0
 _C.MODEL.Para.num_heads = 8
 _C.MODEL.Para.expand_dim = 8
 _C.MODEL.Para.deep_super = [False, True, False, True]
-_C.MODEL.Para.backbone_pretrained = None
-# (
-#     "/home/wjx/data/code/HeartValve/Src/X3D_XS-Kinect.pyth"
-# )
+_C.MODEL.Para.backbone_pretrained = (
+    "/home/wjx/data/code/HeartValve/Src/X3D_XS-Kinect.pyth"
+)
 _C.MODEL.Para.depth_factor = 2.2
 _C.MODEL.Para.stage_depths = [1, 2, 3, 3]  # 1253
 
 
 _C.METHOD = CN()
-_C.METHOD.Detail_Desc = "NoPretrianed-BackX3D-Fold%s" % _C.DATA.Train.DataPara.fold
+_C.METHOD.Detail_Desc = (
+    "Pretrianed-BackX3D-Seed3490-Fold%s" % _C.DATA.Train.DataPara.fold
+)
 _C.METHOD.Name = _C.MODEL.Name
 _C.METHOD.Desc = "T%02dH%03dW%03d/%s-%s" % (
     _C.DATA.Train.DataPara.time_size,
