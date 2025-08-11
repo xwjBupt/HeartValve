@@ -197,11 +197,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Infer your model")
     parser.add_argument(
         "--infer_path",
-        default="/home/wjx/data/code/HeartValve/output_runs/HartValve/PVFNet/T08H320W256/2025-0730-1658#BCELogitLoss-NoPretrianed-BackX3D-Fold2/",  # 'Vessel/ToTest/UNetWithAttetnion/02_19-17_52/',
+        default="/home/wjx/data/code/HeartValve/output_runs/HartValve/PVFNet/T08H320W256/2025-0809-1637#BCELogitLoss-Pretrianed-BackX3D-Seed3490-Fold0/",  # 'Vessel/ToTest/UNetWithAttetnion/02_19-17_52/',
         help="the path of experiments to infer",
         type=str,
     )
-    parser.add_argument("--epochs", default=104, type=int)
+    parser.add_argument("--epochs", default=-1, type=int)
     parser.add_argument("--state", default="test", type=str)
     parser.add_argument("--device", default="cuda", choices=["cpu", "cuda"])
     parser.add_argument(
